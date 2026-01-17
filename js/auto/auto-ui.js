@@ -12,7 +12,6 @@ import { generaBozza } from './auto-engine.js';
 import { validaBozza, confidenzaToLabel } from './auto-schema.js';
 import { salvaBozzaGenerazione, caricaBozzaGenerazione, eliminaBozzaGenerazione } from '../storage.js';
 import { getState } from '../state.js';
-import { renderMeseView } from '../render/mese.js';
 
 /**
  * Renderizza la vista principale di generazione
