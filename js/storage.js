@@ -256,6 +256,47 @@ export function aggiornaRegolaCopertura(id, nuovaRegola) {
     }
 }
 
+// ============= BOZZA GENERAZIONE AUTOMATICA =============
+/**
+ * Carica la bozza di generazione corrente
+ * @returns {Object|null} - Bozza o null se non esiste
+ */
+export function caricaBozzaGenerazione() {
+    const bozza = localStorage.getItem("generatedDraft");
+    if (bozza) {
+        try {
+            return JSON.parse(bozza);
+        } catch {
+            return null;
+        }
+    }
+    return null;
+}
+
+/**
+ * Salva la bozza di generazione
+ * @param {Object} bozza - Oggetto GeneratedDraft da auto-schema.js
+ */
+export function salvaBozzaGenerazione(bozza) {
+    localStorage.setItem("generatedDraft", JSON.stringify(bozza));
+}
+
+/**
+ * Elimina la bozza (quando applicata o scartata)
+ */
+export function eliminaBozzaGenerazione() {
+    localStorage.removeItem("generatedDraft");
+}
+
+/**
+ * Check rapido se esiste una bozza in stato draft
+ * @returns {boolean}
+ */
+export function hasBozzaAttiva() {
+    const bozza = caricaBozzaGenerazione();
+    return bozza && bozza.stato === "draft";
+}
+
 // ============= INIZIALIZZAZIONE =============
 export function initStorage() {
     const operatori = caricaOperatori();
