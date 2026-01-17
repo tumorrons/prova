@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turni Ospedale v3.2</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <h2>🗓️ Gestione Turni Ospedale v3.2</h2>
+    <nav>
+        <button onclick="showView('mese')">📅 Vista Mese</button>
+        <button onclick="showView('anno')">📊 Vista Anno</button>
+        <button onclick="showView('ambulatorio')">🏥 Vista Ambulatorio</button>
+        <button onclick="showView('stampa')">🖨️ Stampa</button>
+        <button onclick="showView('config')">⚙️ Configurazione</button>
+    </nav>
+</header>
+
+<section id="mese"></section>
+<section id="anno" class="hidden"></section>
+<section id="ambulatorio" class="hidden"></section>
+<section id="stampa" class="hidden"></section>
+<section id="config" class="hidden"></section>
+
+<footer>
+    <strong>📌 Seleziona turno:</strong>
+    <span id="turniBar"></span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>
