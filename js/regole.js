@@ -6,6 +6,7 @@
  */
 
 import { getIdOperatore, getNomeOperatore } from './profili.js';
+import { valutaRegoleCustom, costruisciContext } from './regole-custom.js';
 
 /**
  * Gravità delle regole
@@ -33,9 +34,10 @@ export const TIPO_REGOLA = {
  * @param {Number} anno - Anno
  * @param {Number} mese - Mese (0-11)
  * @param {Object} context - Contesto aggiuntivo (turni precedenti, ore settimana, etc.)
+ * @param {Object} turni - Dizionario turni disponibili (per regole custom)
  * @returns {Array} Array di warning/info { tipo, gravita, messaggio, regola }
  */
-export function valutaAssegnazione(operatore, codiceTurno, giorno, anno, mese, context = {}) {
+export function valutaAssegnazione(operatore, codiceTurno, giorno, anno, mese, context = {}, turni = {}) {
     const risultati = [];
 
     // Se è una stringa legacy, nessuna regola da applicare
@@ -204,6 +206,11 @@ export function valutaAssegnazione(operatore, codiceTurno, giorno, anno, mese, c
             });
         }
     }
+
+    // 5. REGOLE PERSONALIZZATE (data-driven)
+    const contextCompleto = costruisciContext(operatore, codiceTurno, giorno, anno, mese, turni, context);
+    const risultatiCustom = valutaRegoleCustom(operatore, contextCompleto);
+    risultati.push(...risultatiCustom);
 
     return risultati;
 }

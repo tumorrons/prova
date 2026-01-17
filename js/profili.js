@@ -17,17 +17,40 @@ export const SCHEMA_PROFILO_DEFAULT = {
         oreSettimanali: 40
     },
     preferenze: {
+        // Campi base (retrocompatibilità)
         sedePreferita: null,
         evitaSede: null,
         evitaTurni: [],
         giorniPreferiti: [],
-        giorniDaEvitare: []
+        giorniDaEvitare: [],
+        // Regole personalizzate (nuovo)
+        regole: []
     },
     vincoli: {
+        // Campi base (retrocompatibilità)
         maxOreSettimanali: null,
         maxGiorniConsecutivi: null,
-        minRiposoOre: 11
+        minRiposoOre: 11,
+        // Regole personalizzate (nuovo)
+        regole: []
     }
+};
+
+/**
+ * Schema regola personalizzata
+ */
+export const SCHEMA_REGOLA = {
+    id: "",                    // ID univoco regola (es. "RULE_001")
+    tipo: "preferenza",        // "preferenza" | "vincolo"
+    descrizione: "",           // Descrizione human-readable
+    condizione: {
+        campo: "",             // Campo da valutare (es. "turno.codice", "giorniConsecutivi")
+        operatore: "equals",   // "equals" | "notEquals" | "gt" | "lt" | "gte" | "lte" | "contains" | "notContains"
+        valore: null           // Valore da confrontare (string, number, array)
+    },
+    gravita: "warning",        // "info" | "warning" | "error"
+    messaggio: "",             // Messaggio da mostrare quando scatta
+    attiva: true               // Se false, regola ignorata
 };
 
 /**
@@ -50,6 +73,35 @@ export const GIORNI_SETTIMANA = [
     { value: "sab", label: "Sabato" },
     { value: "dom", label: "Domenica" }
 ];
+
+/**
+ * Operatori disponibili per regole personalizzate
+ */
+export const OPERATORI_REGOLA = {
+    EQUALS: { value: "equals", label: "è uguale a", simbolo: "=" },
+    NOT_EQUALS: { value: "notEquals", label: "è diverso da", simbolo: "≠" },
+    GT: { value: "gt", label: "è maggiore di", simbolo: ">" },
+    LT: { value: "lt", label: "è minore di", simbolo: "<" },
+    GTE: { value: "gte", label: "è maggiore o uguale a", simbolo: "≥" },
+    LTE: { value: "lte", label: "è minore o uguale a", simbolo: "≤" },
+    CONTAINS: { value: "contains", label: "contiene", simbolo: "∋" },
+    NOT_CONTAINS: { value: "notContains", label: "non contiene", simbolo: "∌" }
+};
+
+/**
+ * Campi disponibili per regole personalizzate
+ */
+export const CAMPI_REGOLA = {
+    TURNO_CODICE: { value: "turno.codice", label: "Codice turno", tipo: "string" },
+    TURNO_TIPO: { value: "turno.tipo", label: "Tipo turno", tipo: "string" },
+    SEDE: { value: "sede", label: "Sede turno", tipo: "string" },
+    GIORNO_SETTIMANA: { value: "giornoSettimana", label: "Giorno settimana", tipo: "string" },
+    GIORNI_CONSECUTIVI: { value: "giorniConsecutivi", label: "Giorni consecutivi", tipo: "number" },
+    ORE_SETTIMANA: { value: "oreSettimana", label: "Ore settimana corrente", tipo: "number" },
+    ORE_MESE: { value: "oreMese", label: "Ore mese", tipo: "number" },
+    ORE_TURNO: { value: "oreTurno", label: "Ore turno", tipo: "number" },
+    RIPOSO_ORE: { value: "riposoOre", label: "Ore riposo da ultimo turno", tipo: "number" }
+};
 
 /**
  * Crea un nuovo profilo vuoto con valori di default
@@ -182,12 +234,50 @@ export function normalizzaProfilo(profilo) {
             evitaSede: profilo.preferenze?.evitaSede || null,
             evitaTurni: profilo.preferenze?.evitaTurni || [],
             giorniPreferiti: profilo.preferenze?.giorniPreferiti || [],
-            giorniDaEvitare: profilo.preferenze?.giorniDaEvitare || []
+            giorniDaEvitare: profilo.preferenze?.giorniDaEvitare || [],
+            regole: profilo.preferenze?.regole || []
         },
         vincoli: {
             maxOreSettimanali: profilo.vincoli?.maxOreSettimanali || null,
             maxGiorniConsecutivi: profilo.vincoli?.maxGiorniConsecutivi || null,
-            minRiposoOre: profilo.vincoli?.minRiposoOre || 11
+            minRiposoOre: profilo.vincoli?.minRiposoOre || 11,
+            regole: profilo.vincoli?.regole || []
         }
     };
+}
+
+/**
+ * Crea una nuova regola vuota
+ */
+export function nuovaRegola(tipo = "preferenza") {
+    return {
+        id: `RULE_${Date.now()}`,
+        tipo,
+        descrizione: "",
+        condizione: {
+            campo: "",
+            operatore: "equals",
+            valore: null
+        },
+        gravita: tipo === "preferenza" ? "info" : "warning",
+        messaggio: "",
+        attiva: true
+    };
+}
+
+/**
+ * Valida una regola personalizzata
+ */
+export function validaRegola(regola) {
+    const errori = [];
+
+    if (!regola.id) errori.push("ID regola mancante");
+    if (!["preferenza", "vincolo"].includes(regola.tipo)) errori.push("Tipo regola non valido");
+    if (!regola.descrizione || regola.descrizione.trim() === "") errori.push("Descrizione regola mancante");
+    if (!regola.condizione?.campo) errori.push("Campo condizione mancante");
+    if (!regola.condizione?.operatore) errori.push("Operatore condizione mancante");
+    if (regola.condizione?.valore === null || regola.condizione?.valore === "") errori.push("Valore condizione mancante");
+    if (!regola.messaggio || regola.messaggio.trim() === "") errori.push("Messaggio regola mancante");
+
+    return errori;
 }

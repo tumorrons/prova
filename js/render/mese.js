@@ -85,7 +85,7 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             let warningRegole = [];
             if (turnoSalvato && typeof op === 'object' && op !== null) {
                 const context = {};
-                const risultati = valutaAssegnazione(op, turnoSalvato, g, anno, mese, context);
+                const risultati = valutaAssegnazione(op, turnoSalvato, g, anno, mese, context, turni);
                 warningRegole = filtraWarning(risultati);
             }
 

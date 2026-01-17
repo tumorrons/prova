@@ -8,6 +8,8 @@ import { caricaOperatori, aggiornaProfilo, aggiungiOperatore, rimuoviOperatore }
 import { nuovoProfilo, validaProfilo, TIPI_CONTRATTO, GIORNI_SETTIMANA, getNomeOperatore } from '../profili.js';
 import { ambulatori, turni } from '../state.js';
 import { renderConfig } from './config.js';
+import { mostraRuleBuilder } from './rule-builder.js';
+import { inizializzaRegoleTemp, getRegoleCustomDaSalvare } from './profili-regole-ui.js';
 
 /**
  * Renderizza sezione profili operatori in configurazione
@@ -290,6 +292,14 @@ window.mostraFormProfilo = function(index = null) {
         </div>
     `;
     preferenzeSection.innerHTML += preferenzeHTML;
+    // Aggiungi sezione regole custom preferenze
+    preferenzeSection.innerHTML += `
+        <div style="margin-top:20px;padding-top:15px;border-top:1px dashed #ccc">
+            <h4 style="font-size:13px;margin-bottom:10px">⚙️ Regole personalizzate</h4>
+            <div id="prof-preferenze-regole-list" style="margin-bottom:10px"></div>
+            <button type="button" class="config-btn config-add" style="font-size:12px;padding:6px 12px" onclick="window.aggiungiRegolaCustom('preferenza')">➕ Aggiungi regola</button>
+        </div>
+    `;
     form.appendChild(preferenzeSection);
 
     // ===== SEZIONE 5: VINCOLI =====
@@ -323,6 +333,14 @@ window.mostraFormProfilo = function(index = null) {
         </div>
     `;
     vincoliSection.innerHTML += vincoliHTML;
+    // Aggiungi sezione regole custom vincoli
+    vincoliSection.innerHTML += `
+        <div style="margin-top:20px;padding-top:15px;border-top:1px dashed #ccc">
+            <h4 style="font-size:13px;margin-bottom:10px">⚙️ Regole personalizzate</h4>
+            <div id="prof-vincoli-regole-list" style="margin-bottom:10px"></div>
+            <button type="button" class="config-btn config-add" style="font-size:12px;padding:6px 12px" onclick="window.aggiungiRegolaCustom('vincolo')">➕ Aggiungi regola</button>
+        </div>
+    `;
     form.appendChild(vincoliSection);
 
     // Bottoni azione
@@ -353,6 +371,9 @@ window.mostraFormProfilo = function(index = null) {
 
     formContainer.appendChild(form);
     overlay.appendChild(formContainer);
+
+    // Inizializza regole custom temp
+    inizializzaRegoleTemp(profilo);
     document.body.appendChild(overlay);
 };
 
@@ -401,12 +422,14 @@ window.salvaProfiloForm = function(index, oldId) {
             evitaSede: null,
             evitaTurni,
             giorniPreferiti: [],
-            giorniDaEvitare: []
+            giorniDaEvitare: [],
+            regole: getRegoleCustomDaSalvare().preferenze
         },
         vincoli: {
             maxOreSettimanali: maxOre,
             maxGiorniConsecutivi: maxGiorni,
-            minRiposoOre: minRiposo
+            minRiposoOre: minRiposo,
+            regole: getRegoleCustomDaSalvare().vincoli
         }
     };
 

@@ -131,7 +131,7 @@ export function assegnaTurno(event, operatoreId, giorno, anno, mese) {
         const context = {
             // Context base (future: calcolare ore settimana, giorni consecutivi, etc.)
         };
-        const risultati = valutaAssegnazione(operatore, turnoSelezionato, giorno, anno, mese, context);
+        const risultati = valutaAssegnazione(operatore, turnoSelezionato, giorno, anno, mese, context, turni);
         warningRegole = filtraWarning(risultati);
     }
 
