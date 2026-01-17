@@ -10,6 +10,7 @@ import { assegnaTurno, aggiornaTitolo, inizializzaCancellazioni } from '../ui.js
 import { renderBoxNoteMese, renderEditorNotaInline } from './note-editor.js';
 import { renderCoveragePanel } from './coverage-panel.js';
 import { getNomeOperatore, getIdOperatore } from '../profili.js';
+import { valutaAssegnazione, generaTooltipRegole, filtraWarning } from '../regole.js';
 
 export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = false) {
     const container = document.getElementById("mese");
@@ -80,8 +81,28 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 cellStyle += `background:${turni[turnoSalvato].colore};color:white;font-weight:bold`;
             }
 
-            if (nota && nota.testo) {
+            // Valuta regole per turni già assegnati (solo se operatore è un profilo completo)
+            let warningRegole = [];
+            if (turnoSalvato && typeof op === 'object' && op !== null) {
+                const context = {};
+                const risultati = valutaAssegnazione(op, turnoSalvato, g, anno, mese, context);
+                warningRegole = filtraWarning(risultati);
+            }
+
+            // Bordo per note (giallo) o warning regole (rosso/arancione)
+            if (nota && nota.testo && warningRegole.length === 0) {
                 cellStyle += ";box-shadow:inset 0 0 0 2px #ff9800";
+            } else if (warningRegole.length > 0) {
+                const haErrori = warningRegole.some(w => w.gravita === 'error');
+                if (haErrori) {
+                    cellStyle += ";box-shadow:inset 0 0 0 3px #d32f2f"; // Rosso per errori
+                } else {
+                    cellStyle += ";box-shadow:inset 0 0 0 2px #ff9800"; // Arancione per warning
+                }
+                // Se c'è anche una nota, bordo doppio
+                if (nota && nota.testo) {
+                    cellStyle += ",inset 0 0 0 5px #fbc02d";
+                }
             }
 
             let contenuto = turnoSalvato || g;
@@ -94,8 +115,15 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 const orarioDettaglio = getOrarioDettaglioTurno(turnoSalvato, ambulatori);
                 const oreCalcolate = calcolaOreTurno(turnoSalvato);
                 tooltipText = `${turni[turnoSalvato].nome} • ${orarioDettaglio} • ${oreCalcolate}h`;
+
+                // Aggiungi warning regole al tooltip
+                if (warningRegole.length > 0) {
+                    const tooltipRegole = generaTooltipRegole(warningRegole);
+                    tooltipText += `\n\n${tooltipRegole}`;
+                }
+
                 if (nota && nota.testo) {
-                    tooltipText += `\n📝 ${nota.testo} (CTRL + doppio click per eliminare)`;
+                    tooltipText += `\n\n📝 ${nota.testo} (CTRL + doppio click per eliminare)`;
                 }
             } else if (nota && nota.testo) {
                 tooltipText = nota.testo + ' (CTRL + doppio click per eliminare)';

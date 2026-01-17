@@ -15,7 +15,7 @@ import {
     setTurnoSelezionato, setModalitaInserimento, deselezionaTutto,
     meseSuccessivo as stateMessuccessivo, mesePrecedente as stateMessPrecedente,
     annoSuccessivo as stateAnnoSuccessivo, annoPrecedente as stateAnnoPrecedente,
-    setAnnoCorrente, setMeseCorrente, turni, ANNO_MIN, ANNO_MAX
+    setAnnoCorrente, setMeseCorrente, turni, operatori, ANNO_MIN, ANNO_MAX
 } from './state.js';
 import { salvaTurno, caricaTurno, caricaNota, salvaNota } from './storage.js';
 import { getNomeMese, getNomiGiorniSettimanaPieni } from './calendar.js';
@@ -26,6 +26,8 @@ import { renderStampa } from './render/stampa.js';
 import { renderConfig } from './render/config.js';
 import { mostraEditorNotaInline } from './render/note-editor.js';
 import { renderCoveragePanel } from './render/coverage-panel.js';
+import { getIdOperatore } from './profili.js';
+import { valutaAssegnazione, generaTooltipRegole, filtraWarning } from './regole.js';
 
 // ============= NAVIGAZIONE VISTE =============
 export function showView(id) {
@@ -103,12 +105,12 @@ export function aggiornaTitolo() {
 }
 
 // ============= ASSEGNAZIONE TURNI =============
-export function assegnaTurno(event, operatore, giorno, anno, mese) {
+export function assegnaTurno(event, operatoreId, giorno, anno, mese) {
     const cell = event.target;
 
     // MODALITÀ NOTE → Editor inline
     if (modalitaInserimento === "nota") {
-        mostraEditorNotaInline(operatore, giorno, anno, mese);
+        mostraEditorNotaInline(operatoreId, giorno, anno, mese);
         return;
     }
 
@@ -118,14 +120,45 @@ export function assegnaTurno(event, operatore, giorno, anno, mese) {
     }
 
     // MODALITÀ TURNO
-    const nota = caricaNota(operatore, giorno, anno, mese);
+    const nota = caricaNota(operatoreId, giorno, anno, mese);
 
+    // Trova operatore completo dall'ID per valutare regole
+    const operatore = operatori.find(op => getIdOperatore(op) === operatoreId);
+
+    // Valuta regole personalizzabili (NON blocca mai)
+    let warningRegole = [];
+    if (operatore && typeof operatore === 'object') {
+        const context = {
+            // Context base (future: calcolare ore settimana, giorni consecutivi, etc.)
+        };
+        const risultati = valutaAssegnazione(operatore, turnoSelezionato, giorno, anno, mese, context);
+        warningRegole = filtraWarning(risultati);
+    }
+
+    // Applica stile base
     cell.innerHTML = turnoSelezionato + (nota && nota.testo ? `<span class="note-badge">N</span>` : "");
     cell.style.background = turni[turnoSelezionato].colore;
     cell.style.color = "white";
     cell.style.fontWeight = "bold";
 
-    salvaTurno(operatore, giorno, turnoSelezionato, anno, mese);
+    // Aggiungi warning visivi se ci sono regole violate
+    if (warningRegole.length > 0) {
+        const tooltipRegole = generaTooltipRegole(warningRegole);
+        const haErrori = warningRegole.some(w => w.gravita === 'error');
+
+        // Bordo colorato per indicare warning
+        if (haErrori) {
+            cell.style.boxShadow = "inset 0 0 0 3px #d32f2f"; // Rosso per errori
+        } else {
+            cell.style.boxShadow = "inset 0 0 0 2px #ff9800"; // Arancione per warning
+        }
+
+        // Tooltip con dettagli
+        const tooltipBase = cell.title || "";
+        cell.title = tooltipRegole + (tooltipBase ? "\n\n" + tooltipBase : "");
+    }
+
+    salvaTurno(operatoreId, giorno, turnoSelezionato, anno, mese);
 
     // Aggiorna pannello copertura se siamo nella vista mese
     const meseContainer = document.getElementById("mese");
