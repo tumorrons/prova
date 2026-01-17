@@ -152,9 +152,9 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             if (turnoSalvato && turni[turnoSalvato]) {
                 cellStyle += `background:${turni[turnoSalvato].colore};color:white;font-weight:bold`;
 
-                // Bordo tratteggiato verde per turni auto-generati
+                // Bordo tratteggiato bianco per turni auto-generati (mantiene colore originale)
                 if (origine === 'auto') {
-                    cellStyle += `;border:3px dashed #4caf50;box-shadow:0 0 8px rgba(76,175,80,0.4)`;
+                    cellStyle += `;border:3px dashed rgba(255,255,255,0.9)`;
                 }
             }
 
