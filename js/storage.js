@@ -157,6 +157,44 @@ export function pulisciTuttiTurni() {
     return keysToRemove.length;
 }
 
+// ============= REGOLE COPERTURA =============
+export function caricaRegoleCopertura() {
+    const regole = localStorage.getItem("coverageRules");
+    if (regole) {
+        try {
+            return JSON.parse(regole);
+        } catch {
+            return null; // Verrà usato il default da coverage.js
+        }
+    }
+    return null;
+}
+
+export function salvaRegoleCopertura(regole) {
+    localStorage.setItem("coverageRules", JSON.stringify(regole));
+}
+
+export function aggiungiRegolaCopertura(regola) {
+    const regole = caricaRegoleCopertura() || [];
+    regole.push(regola);
+    salvaRegoleCopertura(regole);
+}
+
+export function rimuoviRegolaCopertura(id) {
+    const regole = caricaRegoleCopertura() || [];
+    const filtrate = regole.filter(r => r.id !== id);
+    salvaRegoleCopertura(filtrate);
+}
+
+export function aggiornaRegolaCopertura(id, nuovaRegola) {
+    const regole = caricaRegoleCopertura() || [];
+    const index = regole.findIndex(r => r.id === id);
+    if (index !== -1) {
+        regole[index] = nuovaRegola;
+        salvaRegoleCopertura(regole);
+    }
+}
+
 // ============= INIZIALIZZAZIONE =============
 export function initStorage() {
     const operatori = caricaOperatori();

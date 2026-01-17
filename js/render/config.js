@@ -10,6 +10,7 @@ import {
     pulisciTuttiTurni
 } from '../storage.js';
 import { calcolaMinutiTurno, calcolaOreTurno, validaOrario } from '../turni.js';
+import { renderCoverageConfigSection } from './coverage-config.js';
 
 export function renderConfig() {
     const container = document.getElementById("config");
@@ -32,6 +33,9 @@ export function renderConfig() {
 
     // Sezione Azioni Globali
     renderConfigAzioni(container);
+
+    // Sezione Regole Copertura
+    renderCoverageConfigSection(container);
 
     // Sezione Informazioni
     renderConfigInfo(container);

@@ -8,6 +8,7 @@ import { caricaTurno, caricaNota } from '../storage.js';
 import { calcolaOreOperatore, calcolaMinutiOperatore, getOrarioDettaglioTurno, calcolaOreTurno } from '../turni.js';
 import { assegnaTurno, aggiornaTitolo, inizializzaCancellazioni } from '../ui.js';
 import { renderBoxNoteMese, renderEditorNotaInline } from './note-editor.js';
+import { renderCoveragePanel } from './coverage-panel.js';
 
 export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = false) {
     const container = document.getElementById("mese");
@@ -112,6 +113,7 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
     if (!compatto) {
         aggiornaTitolo();
         inizializzaCancellazioni();
+        renderCoveragePanel(container, anno, mese);
         renderBoxNoteMese(document.getElementById("mese"), anno, mese);
         renderEditorNotaInline(container);
     }
