@@ -6,6 +6,7 @@ import { annoCorrente, operatori, turni, ambulatori, vistaAnnoMode, setVistaAnno
 import { giorniNelMese, primoGiornoMese, getNomeMese, getNomiGiorniSettimana } from '../calendar.js';
 import { caricaTurno, caricaNota } from '../storage.js';
 import { calcolaOreOperatore, calcolaMinutiOperatore, getOrarioDettaglioTurno, calcolaOreTurno } from '../turni.js';
+import { getNomeOperatore, getIdOperatore } from '../profili.js';
 
 export function renderAnno(anno = annoCorrente) {
     const container = document.getElementById("anno");
@@ -127,8 +128,11 @@ function renderMiniMese(container, anno, mese, compatto = true) {
             iconaWarning = " ⚠️";
         }
 
-        let row = `<tr data-operatore="${op}">
-            <td class="operator" style="font-size:${compatto ? '9px' : '10px'};padding:2px;text-align:left;min-width:${compatto ? '40px' : '60px'}">${compatto ? op.substring(0, 3) : op}</td>`;
+        const opId = getIdOperatore(op);
+        const opNome = getNomeOperatore(op);
+
+        let row = `<tr data-operatore="${opId}">
+            <td class="operator" style="font-size:${compatto ? '9px' : '10px'};padding:2px;text-align:left;min-width:${compatto ? '40px' : '60px'}">${compatto ? opNome.substring(0, 3) : opNome}</td>`;
 
         for (let g = 1; g <= giorni; g++) {
             let turnoSalvato = caricaTurno(op, g, anno, mese);
@@ -160,7 +164,7 @@ function renderMiniMese(container, anno, mese, compatto = true) {
                 tooltipText = nota.testo;
             }
 
-            row += `<td style="${cellStyle}" data-operatore="${op}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${op}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
+            row += `<td style="${cellStyle}" data-operatore="${opId}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${opId}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
         }
 
         if (!compatto) {
@@ -187,7 +191,7 @@ function renderRiepilogoAnnuale(container, anno) {
         for (let m = 0; m < 12; m++) {
             minutiTotali += calcolaMinutiOperatore(op, anno, m);
         }
-        totaliOp[op] = minutiTotali;
+        totaliOp[getIdOperatore(op)] = minutiTotali;
     });
 
     // Tabella riepilogo operatori
@@ -202,7 +206,7 @@ function renderRiepilogoAnnuale(container, anno) {
         </tr>
     `;
 
-    Object.entries(totaliOp).forEach(([op, minuti]) => {
+    Object.entries(totaliOp).forEach(([opId, minuti]) => {
         const ore = Math.floor(minuti / 60);
         const min = minuti % 60;
         const oreTotali = `${ore}:${min.toString().padStart(2, '0')}`;
@@ -213,9 +217,13 @@ function renderRiepilogoAnnuale(container, anno) {
             styleOre = "color:#d32f2f;font-weight:bold";
         }
 
+        // Trova l'operatore dall'ID per mostrare il nome
+        const op = operatori.find(o => getIdOperatore(o) === opId) || opId;
+        const opNome = getNomeOperatore(op);
+
         tableOp.innerHTML += `
             <tr>
-                <td style="font-weight:bold">${op}</td>
+                <td style="font-weight:bold">${opNome}</td>
                 <td style="${styleOre}">${oreTotali}</td>
                 <td>${mediaMensile}</td>
             </tr>

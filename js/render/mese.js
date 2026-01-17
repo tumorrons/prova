@@ -9,6 +9,7 @@ import { calcolaOreOperatore, calcolaMinutiOperatore, getOrarioDettaglioTurno, c
 import { assegnaTurno, aggiornaTitolo, inizializzaCancellazioni } from '../ui.js';
 import { renderBoxNoteMese, renderEditorNotaInline } from './note-editor.js';
 import { renderCoveragePanel } from './coverage-panel.js';
+import { getNomeOperatore, getIdOperatore } from '../profili.js';
 
 export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = false) {
     const container = document.getElementById("mese");
@@ -61,9 +62,12 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             iconaWarning = " ⚠️";
         }
 
-        let row = `<tr data-operatore="${op}">
+        const opId = getIdOperatore(op);
+        const opNome = getNomeOperatore(op);
+
+        let row = `<tr data-operatore="${opId}">
             <td class="operator" style="${compatto ? 'font-size:10px;padding:2px' : ''}">
-                ${op}
+                ${opNome}
                 ${!compatto ? `<br><small style="${styleOre}">⏱ ${oreOperatore}${iconaWarning}</small>` : ''}
             </td>`;
 
@@ -101,7 +105,7 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 cellStyle += ';padding:2px;font-size:10px';
             }
 
-            row += `<td style="${cellStyle}" data-operatore="${op}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${op}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
+            row += `<td style="${cellStyle}" data-operatore="${opId}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${opId}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
         }
 
         row += "</tr>";

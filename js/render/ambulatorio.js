@@ -7,6 +7,7 @@ import { giorniNelMese, primoGiornoMese, getNomeMese, getNomiGiorniSettimana, ge
 import { caricaTurno, caricaNota } from '../storage.js';
 import { calcolaOreAmbulatorio, calcolaMinutiAmbulatorio, getOrarioDettaglioTurno, calcolaOreTurno, calcolaMinutiTurno } from '../turni.js';
 import { raccogliNoteAmbulatorio } from '../note.js';
+import { getNomeOperatore, getIdOperatore } from '../profili.js';
 
 export function renderAmbulatorio(anno = annoCorrente, mese = meseCorrente) {
     const container = document.getElementById("ambulatorio");
@@ -101,8 +102,11 @@ function renderAmbulatorioDett(container, codiceAmb, ambulatorio, anno, mese) {
 
         if (!hasLavoratoQui) return; // Skip operatori che non hanno lavorato qui
 
-        let row = `<tr data-operatore="${op}">
-            <td class="operator" style="padding:4px;text-align:left">${op}</td>`;
+        const opId = getIdOperatore(op);
+        const opNome = getNomeOperatore(op);
+
+        let row = `<tr data-operatore="${opId}">
+            <td class="operator" style="padding:4px;text-align:left">${opNome}</td>`;
 
         for (let g = 1; g <= giorni; g++) {
             const turnoCode = caricaTurno(op, g, anno, mese);
@@ -164,7 +168,7 @@ function renderAmbulatorioDett(container, codiceAmb, ambulatorio, anno, mese) {
 
             if (!contenuto) contenuto = g;
 
-            row += `<td style="${cellStyle}" data-operatore="${op}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${op}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
+            row += `<td style="${cellStyle}" data-operatore="${opId}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${opId}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
         }
 
         const oreOp = Math.floor(oreOpAmb / 60);
@@ -200,7 +204,7 @@ function renderNoteAmbulatorio(container, codiceAmb, anno, mese) {
         noteItem.style.marginTop = "5px";
         noteItem.style.fontSize = "12px";
         noteItem.innerHTML = `
-            <strong>${item.giorno}/${mese+1}</strong> — ${item.operatore}:
+            <strong>${item.giorno}/${mese+1}</strong> — ${getNomeOperatore(item.operatore)}:
             <span style="color:#333">${item.nota.testo}</span>
         `;
         noteBox.appendChild(noteItem);

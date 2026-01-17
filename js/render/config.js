@@ -4,13 +4,15 @@
 
 import { operatori, turni, ambulatori } from '../state.js';
 import {
-    caricaOperatori, salvaOperatori, aggiungiOperatore, rimuoviOperatore,
+    caricaOperatori, salvaOperatori, // aggiungiOperatore, rimuoviOperatore (gestiti da profili-config),
     caricaAmbulatori, salvaAmbulatori, aggiungiAmbulatorio, rimuoviAmbulatorio,
     caricaTurni, salvaTurni, aggiungiTurno, rimuoviTurno, aggiornaTurno,
     pulisciTuttiTurni
 } from '../storage.js';
 import { calcolaMinutiTurno, calcolaOreTurno, validaOrario } from '../turni.js';
 import { renderCoverageConfigSection } from './coverage-config.js';
+import { renderProfiliConfigSection } from './profili-config.js';
+import { getNomeOperatore } from '../profili.js';
 
 export function renderConfig() {
     const container = document.getElementById("config");
@@ -23,7 +25,7 @@ export function renderConfig() {
     container.appendChild(infoText);
 
     // Sezione Operatori
-    renderConfigOperatori(container);
+    renderProfiliConfigSection(container);
 
     // Sezione Ambulatori
     renderConfigAmbulatori(container);

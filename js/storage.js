@@ -6,7 +6,7 @@
  */
 
 import { setOperatori, setAmbulatori, setTurni } from './state.js';
-import { migraStringaAProfilo, isProfilo, normalizzaProfilo } from './profili.js';
+import { migraStringaAProfilo, isProfilo, normalizzaProfilo, getIdOperatore } from './profili.js';
 
 // ============= OPERATORI (PROFILI) =============
 /**
@@ -166,12 +166,14 @@ export function aggiornaTurno(codice, turno) {
 
 // ============= TURNI ASSEGNATI (PER GIORNO) =============
 export function caricaTurno(operatore, giorno, anno, mese) {
-    const key = `${anno}_${mese}_${operatore}_${giorno}`;
+    const opId = getIdOperatore(operatore);
+    const key = `${anno}_${mese}_${opId}_${giorno}`;
     return localStorage.getItem(key) || "";
 }
 
 export function salvaTurno(operatore, giorno, valore, anno, mese) {
-    const key = `${anno}_${mese}_${operatore}_${giorno}`;
+    const opId = getIdOperatore(operatore);
+    const key = `${anno}_${mese}_${opId}_${giorno}`;
     if (valore) {
         localStorage.setItem(key, valore);
     } else {
@@ -181,19 +183,21 @@ export function salvaTurno(operatore, giorno, valore, anno, mese) {
 
 // ============= NOTE =============
 export function caricaNota(operatore, giorno, anno, mese) {
-    const key = `${anno}_${mese}_${operatore}_${giorno}_note`;
+    const opId = getIdOperatore(operatore);
+    const key = `${anno}_${mese}_${opId}_${giorno}_note`;
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     try {
         return JSON.parse(raw);
     } catch {
         // Retro-compatibilità: se non è JSON, ritorna come oggetto
-        return { testo: raw, operatore, ambulatorio: null };
+        return { testo: raw, operatore: opId, ambulatorio: null };
     }
 }
 
 export function salvaNota(operatore, giorno, notaObj, anno, mese) {
-    const key = `${anno}_${mese}_${operatore}_${giorno}_note`;
+    const opId = getIdOperatore(operatore);
+    const key = `${anno}_${mese}_${opId}_${giorno}_note`;
     if (notaObj && notaObj.testo) {
         localStorage.setItem(key, JSON.stringify(notaObj));
     } else {

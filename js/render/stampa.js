@@ -7,6 +7,7 @@ import { giorniNelMese, primoGiornoMese, getNomeMese, getNomiGiorniSettimana } f
 import { caricaTurno, caricaNota } from '../storage.js';
 import { calcolaOreOperatore, calcolaMinutiOperatore, calcolaOreAmbulatorio, getOrarioDettaglioTurno, calcolaOreTurno } from '../turni.js';
 import { raccogliNoteMese } from '../note.js';
+import { getNomeOperatore, getIdOperatore } from '../profili.js';
 
 export function renderStampa(anno = annoCorrente, mese = meseCorrente) {
     const container = document.getElementById("stampa");
@@ -166,8 +167,10 @@ function renderTabellaMeseStampa(container, anno, mese) {
             iconaWarning = " ⚠️";
         }
 
+        const opNome = getNomeOperatore(op);
+
         let row = `<tr>
-            <td class="operator" style="text-align:left;padding-left:8px;font-weight:bold">${op}</td>`;
+            <td class="operator" style="text-align:left;padding-left:8px;font-weight:bold">${opNome}</td>`;
 
         for (let g = 1; g <= giorni; g++) {
             let turnoSalvato = caricaTurno(op, g, anno, mese);
@@ -263,7 +266,7 @@ function renderNoteStampa(container, anno, mese) {
         noteItem.style.marginBottom = "4px";
         noteItem.style.fontSize = "9px";
         noteItem.innerHTML = `
-            <strong>${item.giorno}/${mese+1}</strong> — ${item.operatore}
+            <strong>${item.giorno}/${mese+1}</strong> — ${getNomeOperatore(item.operatore)}
             ${item.nota.ambulatorio ? `(${ambulatori[item.nota.ambulatorio]?.nome})` : ""}:
             ${item.nota.testo}
         `;
