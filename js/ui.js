@@ -25,6 +25,7 @@ import { renderAmbulatorio } from './render/ambulatorio.js';
 import { renderStampa } from './render/stampa.js';
 import { renderConfig } from './render/config.js';
 import { mostraEditorNotaInline } from './render/note-editor.js';
+import { renderCoveragePanel } from './render/coverage-panel.js';
 
 // ============= NAVIGAZIONE VISTE =============
 export function showView(id) {
@@ -125,6 +126,12 @@ export function assegnaTurno(event, operatore, giorno, anno, mese) {
     cell.style.fontWeight = "bold";
 
     salvaTurno(operatore, giorno, turnoSelezionato, anno, mese);
+
+    // Aggiorna pannello copertura se siamo nella vista mese
+    const meseContainer = document.getElementById("mese");
+    if (meseContainer && !meseContainer.classList.contains("hidden")) {
+        renderCoveragePanel(meseContainer, anno, mese);
+    }
 }
 
 // ============= CANCELLAZIONE TURNI =============
@@ -145,6 +152,12 @@ export function inizializzaCancellazioni(root = document) {
             cell.title = nota && nota.testo ? nota.testo + ' (CTRL + doppio click per eliminare)' : "";
 
             salvaTurno(operatore, giorno, "", anno, mese);
+
+            // Aggiorna pannello copertura se siamo nella vista mese
+            const meseContainer = document.getElementById("mese");
+            if (meseContainer && !meseContainer.classList.contains("hidden")) {
+                renderCoveragePanel(meseContainer, anno, mese);
+            }
         };
 
         // CLICK DESTRO
