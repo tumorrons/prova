@@ -11,6 +11,8 @@
 import { valutaRegolaCustom } from '../regole-custom.js';
 import { getState } from '../state.js';
 
+console.log('📊 [AUTO-SCORING] Modulo caricato correttamente');
+
 /**
  * Calcola lo score di un operatore per un'assegnazione specifica
  *

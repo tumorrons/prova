@@ -13,10 +13,13 @@ import { validaBozza, confidenzaToLabel } from './auto-schema.js';
 import { salvaBozzaGenerazione, caricaBozzaGenerazione, eliminaBozzaGenerazione } from '../storage.js';
 import { getState } from '../state.js';
 
+console.log('🤖 [AUTO-UI] Modulo caricato correttamente');
+
 /**
  * Renderizza la vista principale di generazione
  */
 export function renderAutoView() {
+    console.log('🤖 [AUTO-UI] renderAutoView() chiamata');
     const container = document.getElementById('auto');
     if (!container) return;
 

@@ -14,6 +14,8 @@ import { getState } from '../state.js';
 import { caricaTurno } from '../storage.js';
 import { verificaGiorno, caricaRegole } from '../coverage.js';
 
+console.log('⚙️ [AUTO-ENGINE] Modulo caricato correttamente');
+
 /**
  * Genera una bozza completa di turni per un mese
  *
