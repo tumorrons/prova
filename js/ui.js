@@ -24,6 +24,7 @@ import { renderAnno } from './render/anno.js';
 import { renderAmbulatorio } from './render/ambulatorio.js';
 import { renderStampa } from './render/stampa.js';
 import { renderConfig } from './render/config.js';
+import { renderAutoView } from './auto/auto-ui.js';
 import { mostraEditorNotaInline } from './render/note-editor.js';
 import { renderCoveragePanel } from './render/coverage-panel.js';
 import { getIdOperatore } from './profili.js';
@@ -39,6 +40,7 @@ export function showView(id) {
     }
     if (id === "anno") renderAnno();
     if (id === "ambulatorio") renderAmbulatorio(annoCorrente, meseCorrente);
+    if (id === "auto") renderAutoView();
     if (id === "stampa") renderStampa(annoCorrente, meseCorrente);
     if (id === "config") renderConfig();
 }
