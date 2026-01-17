@@ -148,13 +148,14 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
 
             let nota = caricaNota(op, g, anno, mese);
             let cellStyle = "cursor:pointer;";
+            let cellClass = ""; // Classe per turni auto-generati
 
             if (turnoSalvato && turni[turnoSalvato]) {
                 cellStyle += `background:${turni[turnoSalvato].colore};color:white;font-weight:bold`;
 
-                // Bordo tratteggiato bianco per turni auto-generati (mantiene colore originale)
+                // Classe per pattern a righe se auto-generato
                 if (origine === 'auto') {
-                    cellStyle += `;border:3px dashed rgba(255,255,255,0.9)`;
+                    cellClass = "turno-auto-preview";
                 }
             }
 
@@ -226,7 +227,10 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 cellStyle += ';padding:2px;font-size:10px';
             }
 
-            row += `<td style="${cellStyle}" data-operatore="${opId}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${opId}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
+            // Costruisci attributo class se necessario
+            const classAttr = cellClass ? `class="${cellClass}"` : '';
+
+            row += `<td ${classAttr} style="${cellStyle}" data-operatore="${opId}" data-giorno="${g}" data-anno="${anno}" data-mese="${mese}" title="${tooltipText}" onclick="window.assegnaTurno(event, '${opId}', ${g}, ${anno}, ${mese})">${contenuto}</td>`;
         }
 
         row += "</tr>";
