@@ -15,8 +15,12 @@ import { OPERATORI_REGOLA, CAMPI_REGOLA, nuovaRegola, validaRegola } from '../pr
  * @param {Object} regolaEsistente - Regola da modificare (null se nuova)
  */
 export function mostraRuleBuilder(tipo, onSave, regolaEsistente = null) {
+    console.log(`[DEBUG] mostraRuleBuilder: tipo="${tipo}", isEdit=${!!regolaEsistente}`);
+
     const regola = regolaEsistente || nuovaRegola(tipo);
     const isEdit = !!regolaEsistente;
+
+    console.log(`[DEBUG] Regola da editare:`, regola);
 
     // Crea modal
     let modal = document.getElementById("rule-builder-modal");
@@ -150,7 +154,7 @@ export function mostraRuleBuilder(tipo, onSave, regolaEsistente = null) {
                 </button>
                 <button
                     class="config-btn config-add"
-                    onclick="window.salvaRegolaBuilder('${regola.id}')"
+                    onclick="window.salvaRegolaBuilder('${regola.id}', '${tipo}')"
                 >
                     ${isEdit ? 'Salva Modifiche' : 'Crea Regola'}
                 </button>
@@ -163,6 +167,7 @@ export function mostraRuleBuilder(tipo, onSave, regolaEsistente = null) {
 
     // Store callback per uso globale
     window.__ruleBuilderCallback = onSave;
+    console.log(`[DEBUG] Callback salvata:`, typeof onSave);
 }
 
 /**
@@ -235,7 +240,9 @@ window.aggiornaValoreInput = function() {
 /**
  * Salva regola da Rule Builder
  */
-window.salvaRegolaBuilder = function(idOriginale) {
+window.salvaRegolaBuilder = function(idOriginale, tipoOriginale) {
+    console.log(`[DEBUG] salvaRegolaBuilder chiamata: id="${idOriginale}", tipo="${tipoOriginale}"`);
+
     const descrizione = document.getElementById("rb-descrizione").value.trim();
     const campo = document.getElementById("rb-campo").value;
     const operatore = document.getElementById("rb-operatore").value;
@@ -244,6 +251,8 @@ window.salvaRegolaBuilder = function(idOriginale) {
     const messaggio = document.getElementById("rb-messaggio").value.trim();
     const attiva = document.getElementById("rb-attiva").checked;
 
+    console.log(`[DEBUG] Form values:`, { descrizione, campo, operatore, valoreRaw, gravita, messaggio, attiva });
+
     // Converti valore al tipo corretto
     const campoDef = Object.values(CAMPI_REGOLA).find(c => c.value === campo);
     let valore = valoreRaw;
@@ -251,10 +260,10 @@ window.salvaRegolaBuilder = function(idOriginale) {
         valore = parseFloat(valoreRaw);
     }
 
-    // Costruisci regola
+    // Costruisci regola - USA tipoOriginale NON gravità!
     const regola = {
         id: idOriginale,
-        tipo: gravita === 'info' ? 'preferenza' : 'vincolo',
+        tipo: tipoOriginale,  // FIX: usa tipo passato, non derivato da gravità
         descrizione,
         condizione: {
             campo,
@@ -266,16 +275,25 @@ window.salvaRegolaBuilder = function(idOriginale) {
         attiva
     };
 
+    console.log(`[DEBUG] Regola costruita:`, regola);
+
     // Valida
     const errori = validaRegola(regola);
+    console.log(`[DEBUG] Errori validazione:`, errori);
+
     if (errori.length > 0) {
+        console.error(`[ERROR] Validazione fallita:`, errori);
         alert("Errori nella regola:\n" + errori.join("\n"));
         return;
     }
 
     // Chiama callback
+    console.log(`[DEBUG] Callback esistente:`, !!window.__ruleBuilderCallback);
     if (window.__ruleBuilderCallback) {
+        console.log(`[DEBUG] Chiamata callback...`);
         window.__ruleBuilderCallback(regola);
+    } else {
+        console.error(`[ERROR] Callback non trovata!`);
     }
 
     // Chiudi modal
