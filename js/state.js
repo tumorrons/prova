@@ -145,3 +145,18 @@ export function initState() {
         vistaAnnoMode = savedVistaAnnoMode;
     }
 }
+
+// Getter per stato completo (usato da moduli auto-*)
+export function getState() {
+    return {
+        annoCorrente,
+        meseCorrente,
+        operatori,
+        ambulatori,
+        turni,
+        turnoSelezionato,
+        modalitaInserimento,
+        mesiVisibili,
+        vistaAnnoMode
+    };
+}
