@@ -12,7 +12,7 @@ import { nuovaBozza, nuovoTurnoGenerato } from './auto-schema.js';
 import { calcolaScoreOperatore, filtraOperatoriValidi } from './auto-scoring.js';
 import { getState } from '../state.js';
 import { caricaTurno } from '../storage.js';
-import { valutaCopertura } from '../coverage.js';
+import { verificaGiorno, caricaRegole } from '../coverage.js';
 
 /**
  * Genera una bozza completa di turni per un mese
@@ -124,33 +124,32 @@ function identificaTurniNecessari(giorno, mese, anno, parametri, ambulatori, tur
         return slots;
     }
 
-    // Usa le regole di copertura esistenti
-    const data = new Date(anno, mese, giorno);
-    const giornoSettimana = data.getDay(); // 0=dom, 1=lun, etc.
+    // Carica regole di copertura
+    const regole = caricaRegole();
+    if (!regole || regole.length === 0) {
+        return slots;
+    }
 
-    // Evalua copertura per questo giorno
-    const risultatiCopertura = valutaCopertura(anno, mese, giorno);
+    // Verifica copertura per questo giorno
+    const avvisi = verificaGiorno(giorno, mese, anno, regole);
 
-    // Per ogni ambulatorio, cerca turni mancanti
-    Object.keys(ambulatori).forEach(ambCodice => {
-        // Filtra risultati per questo ambulatorio
-        const mancanze = risultatiCopertura.filter(r =>
-            r.ambulatorio === ambCodice &&
-            r.tipo === 'turnoMancante' &&
-            r.giorno === giorno
-        );
-
-        mancanze.forEach(mancanza => {
+    // Estrai turni mancanti da ogni avviso
+    avvisi.forEach(avviso => {
+        avviso.mancanti.forEach(mancante => {
             // Filtro per ambulatorio se specificato
-            if (parametri.ambulatorioFiltro && parametri.ambulatorioFiltro !== ambCodice) {
+            if (parametri.ambulatorioFiltro && parametri.ambulatorioFiltro !== mancante.ambulatorio) {
                 return;
             }
 
-            slots.push({
-                ambulatorio: ambCodice,
-                codiceTurno: mancanza.turno,
-                motivazione: mancanza.messaggio || `Richiesto da regola copertura`
-            });
+            // Aggiungi uno slot per ogni operatore mancante
+            const mancanza = mancante.richiesti - mancante.presenti;
+            for (let i = 0; i < mancanza; i++) {
+                slots.push({
+                    ambulatorio: mancante.ambulatorio,
+                    codiceTurno: mancante.turno,
+                    motivazione: `${avviso.descrizione} (${mancante.presenti}/${mancante.richiesti})`
+                });
+            }
         });
     });
 
