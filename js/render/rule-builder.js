@@ -4,8 +4,12 @@
  * Modal form per costruire regole data-driven senza codice.
  */
 
+console.log('[DEBUG] 🔧 rule-builder.js caricato');
+
 import { turni } from '../state.js';
 import { OPERATORI_REGOLA, CAMPI_REGOLA, nuovaRegola, validaRegola } from '../profili.js';
+
+console.log('[DEBUG] 🔧 rule-builder.js imports OK');
 
 /**
  * Mostra modal Rule Builder

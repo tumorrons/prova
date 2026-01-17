@@ -8,7 +8,7 @@ import { caricaOperatori, aggiornaProfilo, aggiungiOperatore, rimuoviOperatore }
 import { nuovoProfilo, validaProfilo, TIPI_CONTRATTO, GIORNI_SETTIMANA, getNomeOperatore } from '../profili.js';
 import { ambulatori, turni } from '../state.js';
 import { renderConfig } from './config.js';
-import { mostraRuleBuilder } from './rule-builder.js';
+// import { mostraRuleBuilder } from './rule-builder.js';  // Non usato qui, usato in profili-regole-ui.js
 import { inizializzaRegoleTemp, getRegoleCustomDaSalvare } from './profili-regole-ui.js';
 
 /**

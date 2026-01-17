@@ -5,7 +5,11 @@
  * Lo store interno usa PLURALE ("preferenze" | "vincoli") solo per chiavi
  */
 
+console.log('[DEBUG] 🎨 profili-regole-ui.js caricato');
+
 import { mostraRuleBuilder } from './rule-builder.js';
+
+console.log('[DEBUG] 🎨 profili-regole-ui.js imports OK, mostraRuleBuilder:', typeof mostraRuleBuilder);
 
 /**
  * Converte tipo singolare a chiave plurale per store
@@ -129,22 +133,28 @@ window.aggiungiRegolaCustom = function(tipo) {
     const storeKey = tipoToStoreKey(tipo);
 
     console.log(`[DEBUG] aggiungiRegolaCustom: tipo="${tipo}", storeKey="${storeKey}"`);
+    console.log(`[DEBUG] mostraRuleBuilder disponibile:`, typeof mostraRuleBuilder);
 
-    mostraRuleBuilder(tipo, (regola) => {
-        console.log(`[DEBUG] Regola salvata:`, regola);
+    try {
+        mostraRuleBuilder(tipo, (regola) => {
+            console.log(`[DEBUG] Regola salvata:`, regola);
 
-        // Aggiungi a temp store
-        window.__regoleEditingTemp[storeKey].push(regola);
+            // Aggiungi a temp store
+            window.__regoleEditingTemp[storeKey].push(regola);
 
-        console.log(`[DEBUG] Store aggiornato:`, window.__regoleEditingTemp);
+            console.log(`[DEBUG] Store aggiornato:`, window.__regoleEditingTemp);
 
-        // Ri-renderizza lista (tipo SINGOLARE)
-        renderListaRegole(
-            window.__regoleEditingTemp[storeKey],
-            tipo,
-            tipoToContainerId(tipo)
-        );
-    });
+            // Ri-renderizza lista (tipo SINGOLARE)
+            renderListaRegole(
+                window.__regoleEditingTemp[storeKey],
+                tipo,
+                tipoToContainerId(tipo)
+            );
+        });
+    } catch (error) {
+        console.error(`[ERROR] Errore chiamando mostraRuleBuilder:`, error);
+        alert(`Errore: ${error.message}\n\nVedi console per dettagli.`);
+    }
 };
 
 /**
