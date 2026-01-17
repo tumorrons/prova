@@ -312,12 +312,16 @@ window.mostraFormRegola = function(index = null) {
     form.appendChild(btnAggiungiRichiesto);
 
     // Attiva
-    form.innerHTML += `
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="regola-attiva" ${regola.attiva ? 'checked' : ''}>
-            <span style="font-weight:bold;font-size:13px">Regola attiva</span>
-        </label>
+    const attivaLabel = document.createElement("label");
+    attivaLabel.style.display = "flex";
+    attivaLabel.style.alignItems = "center";
+    attivaLabel.style.gap = "8px";
+    attivaLabel.style.cursor = "pointer";
+    attivaLabel.innerHTML = `
+        <input type="checkbox" id="regola-attiva" ${regola.attiva ? 'checked' : ''}>
+        <span style="font-weight:bold;font-size:13px">Regola attiva</span>
     `;
+    form.appendChild(attivaLabel);
 
     // Bottoni azione
     const actionsDiv = document.createElement("div");
