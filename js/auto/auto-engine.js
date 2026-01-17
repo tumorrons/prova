@@ -92,7 +92,7 @@ export function generaBozza(mese, anno, parametri = {}) {
                 bozza.turni.push(turnoGenerato);
                 bozza.metadata.statistiche.turniGenerati++;
 
-                console.log(`[AUTO-ENGINE]   ✅ Assegnato a ${profilo.anagrafica.nome} (score: ${totale}, confidenza: ${(confidenza * 100).toFixed(0)}%)`);
+                console.log(`[AUTO-ENGINE]   ✅ Assegnato a ${profilo.nome} (score: ${totale}, confidenza: ${(confidenza * 100).toFixed(0)}%)`);
             } else {
                 // Nessun operatore disponibile
                 bozza.metadata.statistiche.slotVuoti++;

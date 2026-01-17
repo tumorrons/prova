@@ -41,7 +41,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
     breakdown.base = 0;
 
     // 2. SEDE PRINCIPALE (forte bonus)
-    if (profilo.anagrafica?.sedePrincipale === ambulatorio) {
+    if (profilo.sedePrincipale === ambulatorio) {
         breakdown.sedePrincipale = 10;
         motivazioni.push(`Sede principale (${ambulatorio})`);
     }
@@ -182,14 +182,12 @@ function scoreToConfidenza(score) {
  */
 export function filtraOperatoriValidi(profili, giorno, codiceTurno, ambulatorio, context) {
     return profili.filter(profilo => {
-        // Esempio: operatore inattivo? Escludi
-        if (profilo.anagrafica?.attivo === false) {
-            return false;
-        }
+        // TODO: Filtra operatori in base a:
+        // - ferie/assenze per questo giorno
+        // - blacklist turni assoluta
+        // - altri vincoli hard
 
-        // Altri filtri hard potrebbero andare qui
-        // (es. ferie, assenze, blacklist turni assoluta)
-
+        // Per ora: tutti gli operatori sono validi
         return true;
     });
 }

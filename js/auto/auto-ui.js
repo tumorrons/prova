@@ -263,7 +263,7 @@ function renderDettaglioTurni(turniGenerati, operatori, ambulatori, turni) {
                             <td style="padding: 10px;">${t.giorno}</td>
                             <td style="padding: 10px;">${t.turno} (${turno?.nome || '-'})</td>
                             <td style="padding: 10px;">${amb?.nome || t.ambulatorio}</td>
-                            <td style="padding: 10px;">${op?.anagrafica?.nome || t.operatore}</td>
+                            <td style="padding: 10px;">${op?.nome || t.operatore}</td>
                             <td style="padding: 10px; text-align: center;">
                                 <span style="background: ${confColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
                                     ${confLabel} (${(t.confidenza * 100).toFixed(0)}%)
