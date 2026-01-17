@@ -372,11 +372,12 @@ window.mostraFormProfilo = function(index = null) {
     formContainer.appendChild(form);
     overlay.appendChild(formContainer);
 
-    // Inizializza regole custom temp
-    inizializzaRegoleTemp(profilo);
-    document.body.appendChild(overlay);
-};
 
+    document.body.appendChild(overlay);
+
+    // Inizializza regole custom temp DOPO che il DOM è pronto
+    inizializzaRegoleTemp(profilo);
+};
 /**
  * Crea una sezione del form con titolo e colore
  */

@@ -1,11 +1,31 @@
 /**
  * profili-regole-ui.js - UI helpers per gestire regole custom nei profili
+ *
+ * REGOLA: Tutte le funzioni pubbliche usano SINGOLARE ("preferenza" | "vincolo")
+ * Lo store interno usa PLURALE ("preferenze" | "vincoli") solo per chiavi
  */
 
 import { mostraRuleBuilder } from './rule-builder.js';
 
 /**
+ * Converte tipo singolare a chiave plurale per store
+ */
+function tipoToStoreKey(tipo) {
+    return tipo === 'preferenza' ? 'preferenze' : 'vincoli';
+}
+
+/**
+ * Converte tipo singolare a container ID
+ */
+function tipoToContainerId(tipo) {
+    return tipo === 'preferenza' ? 'prof-preferenze-regole-list' : 'prof-vincoli-regole-list';
+}
+
+/**
  * Renderizza lista regole custom di un tipo (preferenza o vincolo)
+ * @param {Array} regole - Array regole da mostrare
+ * @param {String} tipo - "preferenza" | "vincolo" (SEMPRE SINGOLARE)
+ * @param {String} containerId - ID elemento DOM dove renderizzare
  */
 export function renderListaRegole(regole, tipo, containerId) {
     const container = document.getElementById(containerId);
@@ -96,60 +116,78 @@ export function inizializzaRegoleTemp(profilo) {
     window.__regoleEditingTemp.preferenze = profilo.preferenze?.regole || [];
     window.__regoleEditingTemp.vincoli = profilo.vincoli?.regole || [];
 
-    // Renderizza liste iniziali
-    renderListaRegole(window.__regoleEditingTemp.preferenze, 'preferenze', 'prof-preferenze-regole-list');
-    renderListaRegole(window.__regoleEditingTemp.vincoli, 'vincoli', 'prof-vincoli-regole-list');
+    // Renderizza liste iniziali (SEMPRE SINGOLARE)
+    renderListaRegole(window.__regoleEditingTemp.preferenze, 'preferenza', 'prof-preferenze-regole-list');
+    renderListaRegole(window.__regoleEditingTemp.vincoli, 'vincolo', 'prof-vincoli-regole-list');
 }
 
 /**
  * Aggiunge nuova regola custom
+ * @param {String} tipo - "preferenza" | "vincolo" (SINGOLARE)
  */
 window.aggiungiRegolaCustom = function(tipo) {
-    mostraRuleBuilder(tipo, (regola) => {
-        // Aggiungi a temp store
-        window.__regoleEditingTemp[tipo === 'preferenza' ? 'preferenze' : 'vincoli'].push(regola);
+    const storeKey = tipoToStoreKey(tipo);
 
-        // Ri-renderizza lista
-        const containerId = tipo === 'preferenza' ? 'prof-preferenze-regole-list' : 'prof-vincoli-regole-list';
+    console.log(`[DEBUG] aggiungiRegolaCustom: tipo="${tipo}", storeKey="${storeKey}"`);
+
+    mostraRuleBuilder(tipo, (regola) => {
+        console.log(`[DEBUG] Regola salvata:`, regola);
+
+        // Aggiungi a temp store
+        window.__regoleEditingTemp[storeKey].push(regola);
+
+        console.log(`[DEBUG] Store aggiornato:`, window.__regoleEditingTemp);
+
+        // Ri-renderizza lista (tipo SINGOLARE)
         renderListaRegole(
-            window.__regoleEditingTemp[tipo === 'preferenza' ? 'preferenze' : 'vincoli'],
-            tipo === 'preferenza' ? 'preferenze' : 'vincoli',
-            containerId
+            window.__regoleEditingTemp[storeKey],
+            tipo,
+            tipoToContainerId(tipo)
         );
     });
 };
 
 /**
  * Modifica regola custom esistente
+ * @param {String} tipo - "preferenza" | "vincolo" (SINGOLARE)
+ * @param {Number} index - Indice regola da modificare
  */
 window.modificaRegolaCustom = function(tipo, index) {
-    const tipoKey = tipo === 'preferenze' ? 'preferenze' : 'vincoli';
-    const regola = window.__regoleEditingTemp[tipoKey][index];
+    const storeKey = tipoToStoreKey(tipo);
+    const regola = window.__regoleEditingTemp[storeKey][index];
 
-    mostraRuleBuilder(tipo === 'preferenze' ? 'preferenza' : 'vincolo', (regolaModificata) => {
+    mostraRuleBuilder(tipo, (regolaModificata) => {
         // Aggiorna in temp store
-        window.__regoleEditingTemp[tipoKey][index] = regolaModificata;
+        window.__regoleEditingTemp[storeKey][index] = regolaModificata;
 
-        // Ri-renderizza lista
-        const containerId = tipo === 'preferenze' ? 'prof-preferenze-regole-list' : 'prof-vincoli-regole-list';
-        renderListaRegole(window.__regoleEditingTemp[tipoKey], tipo, containerId);
+        // Ri-renderizza lista (tipo SINGOLARE)
+        renderListaRegole(
+            window.__regoleEditingTemp[storeKey],
+            tipo,
+            tipoToContainerId(tipo)
+        );
     }, regola);
 };
 
 /**
  * Elimina regola custom
+ * @param {String} tipo - "preferenza" | "vincolo" (SINGOLARE)
+ * @param {Number} index - Indice regola da eliminare
  */
 window.eliminaRegolaCustom = function(tipo, index) {
     if (!confirm("Eliminare questa regola personalizzata?")) return;
 
-    const tipoKey = tipo === 'preferenze' ? 'preferenze' : 'vincoli';
+    const storeKey = tipoToStoreKey(tipo);
 
     // Rimuovi da temp store
-    window.__regoleEditingTemp[tipoKey].splice(index, 1);
+    window.__regoleEditingTemp[storeKey].splice(index, 1);
 
-    // Ri-renderizza lista
-    const containerId = tipo === 'preferenze' ? 'prof-preferenze-regole-list' : 'prof-vincoli-regole-list';
-    renderListaRegole(window.__regoleEditingTemp[tipoKey], tipo, containerId);
+    // Ri-renderizza lista (tipo SINGOLARE)
+    renderListaRegole(
+        window.__regoleEditingTemp[storeKey],
+        tipo,
+        tipoToContainerId(tipo)
+    );
 };
 
 /**
