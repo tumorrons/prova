@@ -35,13 +35,44 @@ export function mostraRuleBuilder(tipo, onSave, regolaEsistente = null) {
         document.body.appendChild(modal);
     }
 
+    // Assicura visibilità con inline styles (fallback se CSS mancante)
+    modal.style.cssText = `
+        display: block;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        overflow: auto;
+        padding: 20px;
+    `;
+
     // Colore sezione
     const coloreSezione = tipo === "preferenza" ? "#e8f5e9" : "#ffebee";
     const titoloIcon = tipo === "preferenza" ? "🟢" : "🔴";
 
     modal.innerHTML = `
-        <div class="modal-content" style="max-width:700px">
-            <span class="close" onclick="document.getElementById('rule-builder-modal').style.display='none'">&times;</span>
+        <div class="modal-content" style="
+            background: white;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 700px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+        ">
+            <span class="close" onclick="document.getElementById('rule-builder-modal').style.display='none'" style="
+                position: absolute;
+                right: 20px;
+                top: 15px;
+                font-size: 28px;
+                font-weight: bold;
+                color: #999;
+                cursor: pointer;
+                line-height: 1;
+            " onmouseover="this.style.color='#000'" onmouseout="this.style.color='#999'">&times;</span>
 
             <h3 style="margin-top:0">${titoloIcon} ${isEdit ? 'Modifica' : 'Nuova'} Regola ${tipo === 'preferenza' ? 'Preferenza' : 'Vincolo'}</h3>
 
@@ -165,9 +196,6 @@ export function mostraRuleBuilder(tipo, onSave, regolaEsistente = null) {
             </div>
         </div>
     `;
-
-    // Mostra modal
-    modal.style.display = "block";
 
     // Store callback per uso globale
     window.__ruleBuilderCallback = onSave;
