@@ -5,7 +5,7 @@
  */
 
 import { caricaRegole, salvaRegole, nuovaRegolaVuota, validaRegola, resetRegolaDefault } from '../coverage.js';
-import { ambulatori, turni } from '../state.js';
+import { ambulatori, turni, getState } from '../state.js';
 import { renderConfig } from './config.js';
 
 /**
@@ -430,6 +430,13 @@ window.renderCondizioneParams = function(quando) {
 
 window.aggiungiRichiestoUI = function(richiesto = null) {
     const container = document.getElementById("richiesti-container");
+    if (!container) {
+        console.error('[COVERAGE-CONFIG] Container richiesti-container non trovato');
+        return;
+    }
+
+    // Ottieni stato corrente
+    const { ambulatori, turni } = getState();
 
     const item = document.createElement("div");
     item.style.display = "flex";
