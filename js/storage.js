@@ -6,14 +6,38 @@
  */
 
 import { setOperatori, setAmbulatori, setTurni } from './state.js';
+import { migraStringaAProfilo, isProfilo, normalizzaProfilo } from './profili.js';
 
-// ============= OPERATORI =============
+// ============= OPERATORI (PROFILI) =============
+/**
+ * Carica operatori con migrazione automatica string → profilo
+ */
 export function caricaOperatori() {
     const ops = localStorage.getItem("operatori");
     if (ops) {
-        return JSON.parse(ops);
+        let parsed = JSON.parse(ops);
+
+        // Migrazione automatica: se troviamo stringhe, convertiamo a profili
+        const migrati = parsed.map(op => {
+            if (typeof op === 'string') {
+                return migraStringaAProfilo(op);
+            }
+            return normalizzaProfilo(op);
+        });
+
+        // Se c'è stata migrazione, salva subito il nuovo formato
+        if (migrati.some((op, i) => typeof parsed[i] === 'string')) {
+            salvaOperatori(migrati);
+        }
+
+        return migrati;
     } else {
-        const defaults = ["Rossi", "Bianchi", "Verdi"];
+        // Default: profili base
+        const defaults = [
+            migraStringaAProfilo("Rossi"),
+            migraStringaAProfilo("Bianchi"),
+            migraStringaAProfilo("Verdi")
+        ];
         salvaOperatori(defaults);
         return defaults;
     }
@@ -24,16 +48,49 @@ export function salvaOperatori(operatori) {
     setOperatori(operatori);
 }
 
-export function aggiungiOperatore(nome) {
+/**
+ * Aggiunge un nuovo operatore (profilo completo)
+ */
+export function aggiungiOperatore(profilo) {
     const operatori = caricaOperatori();
-    operatori.push(nome);
+    operatori.push(normalizzaProfilo(profilo));
     salvaOperatori(operatori);
 }
 
+/**
+ * Rimuove operatore per index
+ */
 export function rimuoviOperatore(index) {
     const operatori = caricaOperatori();
     operatori.splice(index, 1);
     salvaOperatori(operatori);
+}
+
+/**
+ * Aggiorna profilo operatore esistente
+ */
+export function aggiornaProfilo(index, profilo) {
+    const operatori = caricaOperatori();
+    if (index >= 0 && index < operatori.length) {
+        operatori[index] = normalizzaProfilo(profilo);
+        salvaOperatori(operatori);
+    }
+}
+
+/**
+ * Trova profilo per ID
+ */
+export function trovaProfiloPerId(id) {
+    const operatori = caricaOperatori();
+    return operatori.find(op => op.id === id);
+}
+
+/**
+ * Trova profilo per nome
+ */
+export function trovaProfiloPerNome(nome) {
+    const operatori = caricaOperatori();
+    return operatori.find(op => op.nome === nome);
 }
 
 // ============= AMBULATORI =============
