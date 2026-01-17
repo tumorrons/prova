@@ -8,7 +8,7 @@
  * - Componibile: score = somma di componenti indipendenti
  */
 
-import { valutaRegoleCustom } from '../regole-custom.js';
+import { valutaRegolaCustom } from '../regole-custom.js';
 import { getState } from '../state.js';
 
 /**
@@ -74,14 +74,9 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
     // 6. REGOLE CUSTOM PREFERENZE (bonus variabile)
     const regolePreferenze = profilo.preferenze?.regole || [];
     if (regolePreferenze.length > 0) {
-        const risultatiPref = valutaRegoleCustom(
-            profilo,
-            context,
-            regolePreferenze.filter(r => r.attiva)
-        );
-
-        risultatiPref.forEach(risultato => {
-            if (risultato.gravita === 'info') {
+        regolePreferenze.filter(r => r.attiva).forEach(regola => {
+            const risultato = valutaRegolaCustom(regola, context);
+            if (risultato && risultato.gravita === 'info') {
                 breakdown.preferenzeCustom += 3; // Bonus piccolo per preferenze rispettate
                 motivazioni.push(risultato.messaggio);
             }
@@ -91,19 +86,16 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
     // 7. REGOLE CUSTOM VINCOLI (penalità variabile)
     const regoleVincoli = profilo.vincoli?.regole || [];
     if (regoleVincoli.length > 0) {
-        const risultatiVinc = valutaRegoleCustom(
-            profilo,
-            context,
-            regoleVincoli.filter(r => r.attiva)
-        );
-
-        risultatiVinc.forEach(risultato => {
-            if (risultato.gravita === 'warning') {
-                breakdown.vincoliCustom -= 15; // Penalità media per vincoli violati
-                motivazioni.push("⚠️ " + risultato.messaggio);
-            } else if (risultato.gravita === 'error') {
-                breakdown.vincoliCustom -= 30; // Penalità forte per vincoli critici
-                motivazioni.push("❌ " + risultato.messaggio);
+        regoleVincoli.filter(r => r.attiva).forEach(regola => {
+            const risultato = valutaRegolaCustom(regola, context);
+            if (risultato) {
+                if (risultato.gravita === 'warning') {
+                    breakdown.vincoliCustom -= 15; // Penalità media per vincoli violati
+                    motivazioni.push("⚠️ " + risultato.messaggio);
+                } else if (risultato.gravita === 'error') {
+                    breakdown.vincoliCustom -= 30; // Penalità forte per vincoli critici
+                    motivazioni.push("❌ " + risultato.messaggio);
+                }
             }
         });
     }
