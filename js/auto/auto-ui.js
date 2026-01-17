@@ -11,7 +11,7 @@
 import { generaBozza } from './auto-engine.js';
 import { validaBozza, confidenzaToLabel } from './auto-schema.js';
 import { salvaBozzaGenerazione, caricaBozzaGenerazione, eliminaBozzaGenerazione } from '../storage.js';
-import { getState } from '../state.js';
+import { getState, setMostraBozza, setMeseCorrente, setAnnoCorrente } from '../state.js';
 
 console.log('🤖 [AUTO-UI] Modulo caricato correttamente');
 
@@ -20,6 +20,11 @@ console.log('🤖 [AUTO-UI] Modulo caricato correttamente');
  */
 export function renderAutoView() {
     console.log('🤖 [AUTO-UI] renderAutoView() chiamata');
+
+    // Quando si torna alla vista Generazione, disattiva visualizzazione bozza
+    // (a meno che non sia stata scartata/applicata prima)
+    setMostraBozza(false);
+
     const container = document.getElementById('auto');
     if (!container) return;
 
@@ -385,8 +390,14 @@ window.scartaBozza = function() {
     const conferma = confirm('Sei sicuro di voler scartare questa bozza?\n\nI turni non verranno salvati.');
     if (!conferma) return;
 
+    // Disattiva visualizzazione bozza
+    setMostraBozza(false);
+
+    // Elimina bozza
     eliminaBozzaGenerazione();
-    console.log('[AUTO-UI] Bozza scartata');
+    console.log('[AUTO-UI] Bozza scartata e modalità visualizzazione disattivata');
+
+    // Torna al pannello parametri
     renderAutoView();
 };
 
@@ -415,16 +426,29 @@ window.applicaBozza = function() {
 };
 
 /**
- * Naviga alla vista Mese
+ * Naviga alla vista Mese mostrando la bozza
  */
 window.vaiVistaMese = function() {
+    console.log('[AUTO-UI] vaiVistaMese chiamata');
+
     const bozza = caricaBozzaGenerazione();
     if (bozza && bozza.periodo) {
-        // TODO: Sincronizzare mese/anno corrente con la bozza
-        window.currentMonth = bozza.periodo.mese;
-        window.currentYear = bozza.periodo.anno;
+        // Sincronizza mese/anno corrente con la bozza
+        setMeseCorrente(bozza.periodo.mese);
+        setAnnoCorrente(bozza.periodo.anno);
+        console.log(`[AUTO-UI] Sincronizzato periodo: ${bozza.periodo.anno}-${bozza.periodo.mese + 1}`);
     }
 
-    // Cambia vista
+    // Cambia vista (showView disattiva mostraBozza, lo riattiveremo dopo)
     window.showView('mese');
+
+    // Attiva modalità visualizzazione bozza DOPO il cambio vista
+    setMostraBozza(true);
+    console.log('[AUTO-UI] Modalità mostraBozza attivata');
+
+    // Re-renderizza la vista mese con la bozza attiva
+    import('../render/mese.js').then(module => {
+        module.renderMese();
+        console.log('[AUTO-UI] Vista Mese re-renderizzata con bozza');
+    });
 };

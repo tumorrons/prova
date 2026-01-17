@@ -15,7 +15,8 @@ import {
     setTurnoSelezionato, setModalitaInserimento, deselezionaTutto,
     meseSuccessivo as stateMessuccessivo, mesePrecedente as stateMessPrecedente,
     annoSuccessivo as stateAnnoSuccessivo, annoPrecedente as stateAnnoPrecedente,
-    setAnnoCorrente, setMeseCorrente, turni, operatori, ANNO_MIN, ANNO_MAX
+    setAnnoCorrente, setMeseCorrente, turni, operatori, ANNO_MIN, ANNO_MAX,
+    setMostraBozza
 } from './state.js';
 import { salvaTurno, caricaTurno, caricaNota, salvaNota } from './storage.js';
 import { getNomeMese, getNomiGiorniSettimanaPieni } from './calendar.js';
@@ -34,6 +35,12 @@ import { valutaAssegnazione, generaTooltipRegole, filtraWarning } from './regole
 export function showView(id) {
     document.querySelectorAll("section").forEach(s => s.classList.add("hidden"));
     document.getElementById(id).classList.remove("hidden");
+
+    // Quando si cambia vista tramite i bottoni del menu,
+    // disattiva visualizzazione bozza (sarà riattivata da vaiVistaMese se necessario)
+    if (id !== 'auto') {
+        setMostraBozza(false);
+    }
 
     if (id === "mese") {
         renderMese();

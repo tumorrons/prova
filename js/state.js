@@ -27,6 +27,11 @@ export let notaCorrente = {
     mese: null
 };
 
+// Stato visualizzazione bozza generazione automatica
+export let viewMode = {
+    mostraBozza: false
+};
+
 // Dati di dominio (caricati da storage)
 export let operatori = [];
 export let ambulatori = {
@@ -157,6 +162,12 @@ export function getState() {
         turnoSelezionato,
         modalitaInserimento,
         mesiVisibili,
-        vistaAnnoMode
+        vistaAnnoMode,
+        viewMode
     };
+}
+
+// Setter per viewMode
+export function setMostraBozza(valore) {
+    viewMode.mostraBozza = valore;
 }

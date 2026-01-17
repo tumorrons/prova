@@ -2,15 +2,81 @@
  * render/mese.js - Rendering vista mensile
  */
 
-import { annoCorrente, meseCorrente, operatori, turni, ambulatori } from '../state.js';
+import { annoCorrente, meseCorrente, operatori, turni, ambulatori, viewMode } from '../state.js';
 import { giorniNelMese, primoGiornoMese, getNomeMese, getNomiGiorniSettimana } from '../calendar.js';
-import { caricaTurno, caricaNota } from '../storage.js';
+import { caricaTurno, caricaNota, caricaBozzaGenerazione } from '../storage.js';
 import { calcolaOreOperatore, calcolaMinutiOperatore, getOrarioDettaglioTurno, calcolaOreTurno } from '../turni.js';
 import { assegnaTurno, aggiornaTitolo, inizializzaCancellazioni } from '../ui.js';
 import { renderBoxNoteMese, renderEditorNotaInline } from './note-editor.js';
 import { renderCoveragePanel } from './coverage-panel.js';
 import { getNomeOperatore, getIdOperatore } from '../profili.js';
 import { valutaAssegnazione, generaTooltipRegole, filtraWarning } from '../regole.js';
+
+/**
+ * Carica turno con merge temporaneo della bozza se attiva
+ * @param {Object} operatore - Profilo operatore
+ * @param {number} giorno - Giorno del mese
+ * @param {number} anno - Anno
+ * @param {number} mese - Mese (0-11)
+ * @returns {{turno: string|null, origine: string, motivazioni: string[]}}
+ */
+function caricaTurnoConBozza(operatore, giorno, anno, mese) {
+    // Turno ufficiale da localStorage
+    const turnoUfficiale = caricaTurno(operatore, giorno, anno, mese);
+
+    // Se non stiamo mostrando la bozza, ritorna solo il turno ufficiale
+    if (!viewMode.mostraBozza) {
+        return {
+            turno: turnoUfficiale,
+            origine: 'manuale',
+            motivazioni: []
+        };
+    }
+
+    // Carica la bozza
+    const bozza = caricaBozzaGenerazione();
+    if (!bozza || bozza.stato !== 'draft') {
+        return {
+            turno: turnoUfficiale,
+            origine: 'manuale',
+            motivazioni: []
+        };
+    }
+
+    // Verifica se la bozza è per questo periodo
+    if (bozza.periodo.anno !== anno || bozza.periodo.mese !== mese) {
+        return {
+            turno: turnoUfficiale,
+            origine: 'manuale',
+            motivazioni: []
+        };
+    }
+
+    // Cerca turno nella bozza per questo operatore e giorno
+    const opId = getIdOperatore(operatore);
+    const turnoBozza = bozza.turni.find(t =>
+        t.giorno === giorno && t.operatore === opId
+    );
+
+    // Se esiste nella bozza, usa quello (con priorità su turno ufficiale)
+    if (turnoBozza) {
+        // Costruisce il codice turno nel formato "AMBULATORIO_TURNO" usato da localStorage
+        const codiceTurno = `${turnoBozza.ambulatorio}_${turnoBozza.turno}`;
+        return {
+            turno: codiceTurno,
+            origine: 'auto',
+            motivazioni: turnoBozza.motivazioni || [],
+            confidenza: turnoBozza.confidenza
+        };
+    }
+
+    // Altrimenti usa il turno ufficiale
+    return {
+        turno: turnoUfficiale,
+        origine: 'manuale',
+        motivazioni: []
+    };
+}
 
 export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = false) {
     const container = document.getElementById("mese");
@@ -73,12 +139,23 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             </td>`;
 
         for (let g = 1; g <= giorni; g++) {
-            let turnoSalvato = caricaTurno(op, g, anno, mese);
+            // Carica turno con merge bozza se attiva
+            const turnoData = caricaTurnoConBozza(op, g, anno, mese);
+            const turnoSalvato = turnoData.turno;
+            const origine = turnoData.origine;
+            const motivazioniAuto = turnoData.motivazioni;
+            const confidenza = turnoData.confidenza;
+
             let nota = caricaNota(op, g, anno, mese);
             let cellStyle = "cursor:pointer;";
 
             if (turnoSalvato && turni[turnoSalvato]) {
                 cellStyle += `background:${turni[turnoSalvato].colore};color:white;font-weight:bold`;
+
+                // Bordo tratteggiato verde per turni auto-generati
+                if (origine === 'auto') {
+                    cellStyle += `;border:3px dashed #4caf50;box-shadow:0 0 8px rgba(76,175,80,0.4)`;
+                }
             }
 
             // Valuta regole per turni già assegnati (solo se operatore è un profilo completo)
@@ -106,6 +183,12 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             }
 
             let contenuto = turnoSalvato || g;
+
+            // Badge per turni auto-generati
+            if (origine === 'auto') {
+                contenuto += `<span style="font-size:10px;margin-left:2px">🤖</span>`;
+            }
+
             if (nota && nota.testo) {
                 contenuto += `<span class="note-badge">N</span>`;
             }
@@ -115,6 +198,16 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 const orarioDettaglio = getOrarioDettaglioTurno(turnoSalvato, ambulatori);
                 const oreCalcolate = calcolaOreTurno(turnoSalvato);
                 tooltipText = `${turni[turnoSalvato].nome} • ${orarioDettaglio} • ${oreCalcolate}h`;
+
+                // Info turno auto-generato
+                if (origine === 'auto') {
+                    const confPerc = Math.round((confidenza || 0) * 100);
+                    tooltipText += `\n\n🤖 GENERATO AUTOMATICAMENTE`;
+                    tooltipText += `\nConfidenza: ${confPerc}%`;
+                    if (motivazioniAuto && motivazioniAuto.length > 0) {
+                        tooltipText += `\nMotivazioni:\n• ${motivazioniAuto.join('\n• ')}`;
+                    }
+                }
 
                 // Aggiungi warning regole al tooltip
                 if (warningRegole.length > 0) {
