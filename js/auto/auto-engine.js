@@ -322,21 +322,38 @@ function raccogliTurniOperatore(operatoreId, mese, anno, bozza) {
 function calcolaOreSettimana(turniOperatore, giornoCorrente, turni) {
     let ore = 0;
 
+    console.log(`[DEBUG-ORE] calcolaOreSettimana chiamata: giornoCorrente=${giornoCorrente}, turniOperatore.length=${turniOperatore.length}`);
+    console.log(`[DEBUG-ORE]   turniOperatore=`, turniOperatore);
+    console.log(`[DEBUG-ORE]   turni keys=`, Object.keys(turni));
+
     turniOperatore.forEach(t => {
+        console.log(`[DEBUG-ORE]   Analisi turno: giorno=${t.giorno}, codiceTurno=${t.codiceTurno}`);
+
         // Conta solo turni negli ultimi 7 giorni
-        if (t.giorno < giornoCorrente && t.giorno >= (giornoCorrente - 7)) {
+        const passaCondizione = t.giorno < giornoCorrente && t.giorno >= (giornoCorrente - 7);
+        console.log(`[DEBUG-ORE]     Condizione data: ${t.giorno} < ${giornoCorrente} && ${t.giorno} >= ${giornoCorrente - 7} = ${passaCondizione}`);
+
+        if (passaCondizione) {
             const defTurno = turni[t.codiceTurno];
+            console.log(`[DEBUG-ORE]     defTurno trovato:`, defTurno);
+
             if (defTurno && defTurno.orario) {
+                console.log(`[DEBUG-ORE]     orario="${defTurno.orario}"`);
+
                 // Parsing ore dal formato "HH:MM – HH:MM"
                 const match = defTurno.orario.match(/(\d+):00\s*[–-]\s*(\d+):00/);
+                console.log(`[DEBUG-ORE]     regex match:`, match);
+
                 if (match) {
                     const oreT = parseInt(match[2]) - parseInt(match[1]);
+                    console.log(`[DEBUG-ORE]     Ore calcolate: ${match[1]} -> ${match[2]} = ${oreT}h`);
                     ore += oreT;
                 }
             }
         }
     });
 
+    console.log(`[DEBUG-ORE]   Totale ore settimana: ${ore}`);
     return ore;
 }
 
