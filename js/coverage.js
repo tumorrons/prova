@@ -102,9 +102,17 @@ export function verificaTurniRichiesti(regola, giorno, anno, mese) {
         // Usa getTurnoVisibile invece di caricaTurno per considerare anche la bozza
         operatori.forEach(op => {
             const turnoAssegnato = getTurnoVisibile(op, giorno, anno, mese);
-            if (turnoAssegnato === requisito.turno) {
+            if (!turnoAssegnato) return;
+
+            // Estrai il codice turno puro (rimuovi prefisso ambulatorio se presente)
+            // Formato può essere "BUD_BM" o solo "BM"
+            const codiceTurnoPuro = turnoAssegnato.includes('_')
+                ? turnoAssegnato.split('_')[1]  // "BUD_BM" → "BM"
+                : turnoAssegnato;                // "BM" → "BM"
+
+            if (codiceTurnoPuro === requisito.turno) {
                 // Verifica anche che sia dell'ambulatorio giusto
-                const turnoObj = turni[turnoAssegnato];
+                const turnoObj = turni[codiceTurnoPuro] || turni[turnoAssegnato];
                 if (turnoObj && turnoObj.ambulatorio === requisito.ambulatorio) {
                     count++;
                 }
