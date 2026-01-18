@@ -324,7 +324,8 @@ function calcolaOreSettimana(turniOperatore, giornoCorrente, turni) {
 
     console.log(`[DEBUG-ORE] calcolaOreSettimana chiamata: giornoCorrente=${giornoCorrente}, turniOperatore.length=${turniOperatore.length}`);
     console.log(`[DEBUG-ORE]   turniOperatore=`, turniOperatore);
-    console.log(`[DEBUG-ORE]   turni keys=`, Object.keys(turni));
+    console.log(`[DEBUG-ORE]   turni keys disponibili:`, Object.keys(turni));
+    console.log(`[DEBUG-ORE]   turni completo:`, turni);
 
     turniOperatore.forEach(t => {
         console.log(`[DEBUG-ORE]   Analisi turno: giorno=${t.giorno}, codiceTurno=${t.codiceTurno}`);
@@ -335,10 +336,16 @@ function calcolaOreSettimana(turniOperatore, giornoCorrente, turni) {
 
         if (passaCondizione) {
             const defTurno = turni[t.codiceTurno];
-            console.log(`[DEBUG-ORE]     defTurno trovato:`, defTurno);
+            console.log(`[DEBUG-ORE]     Lookup: turni["${t.codiceTurno}"] =`, defTurno);
+
+            if (!defTurno) {
+                console.log(`[DEBUG-ORE]     ❌ Turno "${t.codiceTurno}" non trovato in mappa turni!`);
+            } else if (!defTurno.orario) {
+                console.log(`[DEBUG-ORE]     ❌ Turno "${t.codiceTurno}" trovato ma senza proprietà orario:`, Object.keys(defTurno));
+            }
 
             if (defTurno && defTurno.orario) {
-                console.log(`[DEBUG-ORE]     orario="${defTurno.orario}"`);
+                console.log(`[DEBUG-ORE]     ✅ orario="${defTurno.orario}"`);
 
                 // Parsing ore dal formato "HH:MM – HH:MM"
                 const match = defTurno.orario.match(/(\d+):00\s*[–-]\s*(\d+):00/);
