@@ -492,8 +492,21 @@ window.vaiVistaMese = function() {
     console.log('[AUTO-UI] Modalità mostraBozza attivata');
 
     // Re-renderizza la vista mese con la bozza attiva
-    import('../render/mese.js').then(module => {
-        module.renderMese();
+    Promise.all([
+        import('../render/mese.js'),
+        import('../render/coverage-panel.js')
+    ]).then(([meseModule, coverageModule]) => {
+        const { annoCorrente, meseCorrente } = getState();
+
+        // Renderizza vista mese con bozza
+        meseModule.renderMese();
         console.log('[AUTO-UI] Vista Mese re-renderizzata con bozza');
+
+        // Ricalcola avvisi copertura con la bozza attiva
+        const meseContainer = document.getElementById('mese');
+        if (meseContainer) {
+            coverageModule.renderCoveragePanel(meseContainer, annoCorrente, meseCorrente);
+            console.log('[AUTO-UI] Avvisi copertura ricalcolati con bozza');
+        }
     });
 };
