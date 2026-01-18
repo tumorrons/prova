@@ -72,7 +72,8 @@ export function generaBozza(mese, anno, parametri = {}) {
                 anno,
                 codiceTurno,
                 ambulatorio,
-                parametri
+                parametri,
+                bozza  // Passa bozza corrente per calcolare ore simulate
             );
 
             if (risultato) {
@@ -168,9 +169,10 @@ function identificaTurniNecessari(giorno, mese, anno, parametri, ambulatori, tur
  * @param {string} codiceTurno
  * @param {string} ambulatorio
  * @param {Object} parametri
+ * @param {Object} bozza - Bozza corrente con turni già generati
  * @returns {Object|null} - { profilo, totale, breakdown, motivazioni, confidenza } o null
  */
-function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambulatorio, parametri) {
+function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambulatorio, parametri, bozza) {
     // 1. Filtra operatori validi (non inattivi, non assenti, etc.)
     const operatoriValidi = filtraOperatoriValidi(operatori, giorno, codiceTurno, ambulatorio, {});
 
@@ -180,8 +182,8 @@ function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambu
 
     // 2. Calcola score per ogni operatore
     const scored = operatoriValidi.map(profilo => {
-        // Costruisci context (qui semplificato, in futuro potrebbe includere calcoli complessi)
-        const context = costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio);
+        // Costruisci context includendo turni già generati nella bozza
+        const context = costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio, bozza);
 
         // Calcola score
         const result = calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio, context);
@@ -214,9 +216,10 @@ function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambu
  * @param {number} anno
  * @param {string} codiceTurno
  * @param {string} ambulatorio
+ * @param {Object} bozza - Bozza corrente con turni già generati
  * @returns {Object} - Context completo per valutazione regole
  */
-function costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio) {
+function costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio, bozza) {
     const { turni } = getState();
     const data = new Date(anno, mese, giorno);
 
@@ -233,19 +236,132 @@ function costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio
         }
     };
 
-    // TODO: Calcolare campi avanzati (richiede scan dei turni assegnati)
-    // - oreSettimana: somma ore nei 7 giorni precedenti
-    // - giorniConsecutivi: conta giorni di fila con turni
-    // - riposoOre: ore dall'ultimo turno
-    // - turniNelMese: conta turni questo mese
-    // - turniSettimana: conta turni questa settimana
+    // Calcola campi avanzati considerando:
+    // 1. Turni in localStorage (già salvati)
+    // 2. Turni nella bozza (già generati in questa sessione)
 
-    // Per ora: valori placeholder (verranno implementati in iterazione successiva)
-    context.oreSettimana = 0;
-    context.giorniConsecutivi = 0;
+    // Raccogli tutti i turni dell'operatore (localStorage + bozza)
+    const turniOperatore = raccogliTurniOperatore(profilo.id, mese, anno, bozza);
+
+    // Calcola ore settimana (ultimi 7 giorni)
+    context.oreSettimana = calcolaOreSettimana(turniOperatore, giorno, turni);
+
+    // Calcola giorni consecutivi
+    context.giorniConsecutivi = calcolaGiorniConsecutivi(turniOperatore, giorno);
+
+    // Calcola turni nel mese
+    context.turniNelMese = turniOperatore.length;
+
+    // Calcola turni nella settimana corrente
+    context.turniSettimana = calcolaTurniSettimana(turniOperatore, giorno);
+
+    // Riposo ore (per ora fisso, implementabile in futuro)
     context.riposoOre = 24;
-    context.turniNelMese = 0;
-    context.turniSettimana = 0;
 
     return context;
+}
+
+/**
+ * Raccoglie tutti i turni di un operatore per il mese specificato
+ * Include sia turni in localStorage che turni già generati nella bozza
+ *
+ * @param {string} operatoreId
+ * @param {number} mese
+ * @param {number} anno
+ * @param {Object} bozza - Bozza corrente
+ * @returns {Array} - Array di { giorno, codiceTurno }
+ */
+function raccogliTurniOperatore(operatoreId, mese, anno, bozza) {
+    const turniArray = [];
+    const giorni = new Date(anno, mese + 1, 0).getDate();
+
+    // 1. Turni da localStorage
+    for (let g = 1; g <= giorni; g++) {
+        const turnoSalvato = caricaTurno(operatoreId, g, anno, mese);
+        if (turnoSalvato) {
+            // Estrai codice turno (può essere "AMB_TURNO" o solo "TURNO")
+            let codiceTurno = turnoSalvato;
+            if (turnoSalvato.includes('_')) {
+                const parts = turnoSalvato.split('_');
+                codiceTurno = parts[parts.length - 1];
+            }
+            turniArray.push({ giorno: g, codiceTurno });
+        }
+    }
+
+    // 2. Turni dalla bozza (già generati in questa sessione)
+    if (bozza && bozza.turni) {
+        bozza.turni.forEach(t => {
+            if (t.operatore === operatoreId) {
+                turniArray.push({ giorno: t.giorno, codiceTurno: t.turno });
+            }
+        });
+    }
+
+    return turniArray;
+}
+
+/**
+ * Calcola ore settimanali (ultimi 7 giorni dal giorno specificato)
+ *
+ * @param {Array} turniOperatore - Array di { giorno, codiceTurno }
+ * @param {number} giornoCorrente
+ * @param {Object} turni - Definizioni turni da state
+ * @returns {number} - Ore totali
+ */
+function calcolaOreSettimana(turniOperatore, giornoCorrente, turni) {
+    let ore = 0;
+
+    turniOperatore.forEach(t => {
+        // Conta solo turni negli ultimi 7 giorni
+        if (t.giorno < giornoCorrente && t.giorno >= (giornoCorrente - 7)) {
+            const defTurno = turni[t.codiceTurno];
+            if (defTurno && defTurno.orario) {
+                // Parsing ore dal formato "HH:MM – HH:MM"
+                const match = defTurno.orario.match(/(\d+):00\s*[–-]\s*(\d+):00/);
+                if (match) {
+                    const oreT = parseInt(match[2]) - parseInt(match[1]);
+                    ore += oreT;
+                }
+            }
+        }
+    });
+
+    return ore;
+}
+
+/**
+ * Calcola giorni consecutivi con turni fino al giorno specificato
+ *
+ * @param {Array} turniOperatore
+ * @param {number} giornoCorrente
+ * @returns {number}
+ */
+function calcolaGiorniConsecutivi(turniOperatore, giornoCorrente) {
+    let consecutivi = 0;
+
+    // Controlla a ritroso dal giorno precedente
+    for (let g = giornoCorrente - 1; g >= 1; g--) {
+        const haTurno = turniOperatore.some(t => t.giorno === g);
+        if (haTurno) {
+            consecutivi++;
+        } else {
+            break; // Interrompi alla prima assenza
+        }
+    }
+
+    return consecutivi;
+}
+
+/**
+ * Calcola numero turni nella settimana corrente
+ *
+ * @param {Array} turniOperatore
+ * @param {number} giornoCorrente
+ * @returns {number}
+ */
+function calcolaTurniSettimana(turniOperatore, giornoCorrente) {
+    return turniOperatore.filter(t =>
+        t.giorno < giornoCorrente && t.giorno >= (giornoCorrente - 7)
+    ).length;
 }
