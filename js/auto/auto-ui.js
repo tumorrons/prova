@@ -391,6 +391,10 @@ window.scartaBozza = function() {
     const conferma = confirm('Sei sicuro di voler scartare questa bozza?\n\nI turni non verranno salvati.');
     if (!conferma) return;
 
+    // Controlla se la vista mese è attiva
+    const meseContainer = document.getElementById('mese');
+    const vistaMeseAttiva = meseContainer && !meseContainer.classList.contains('hidden');
+
     // Disattiva visualizzazione bozza
     setMostraBozza(false);
 
@@ -398,8 +402,28 @@ window.scartaBozza = function() {
     eliminaBozzaGenerazione();
     console.log('[AUTO-UI] Bozza scartata e modalità visualizzazione disattivata');
 
-    // Torna al pannello parametri
-    renderAutoView();
+    // Se la vista mese era attiva, ricalcola avvisi con turni ufficiali
+    if (vistaMeseAttiva) {
+        Promise.all([
+            import('../render/mese.js'),
+            import('../render/coverage-panel.js')
+        ]).then(([meseModule, coverageModule]) => {
+            const { annoCorrente, meseCorrente } = getState();
+
+            // Re-renderizza vista mese senza bozza
+            meseModule.renderMese();
+            console.log('[AUTO-UI] Vista Mese re-renderizzata dopo scarto bozza');
+
+            // Ricalcola avvisi con turni ufficiali
+            if (meseContainer) {
+                coverageModule.renderCoveragePanel(meseContainer, annoCorrente, meseCorrente);
+                console.log('[AUTO-UI] Avvisi copertura ricalcolati con turni ufficiali');
+            }
+        });
+    } else {
+        // Torna al pannello parametri
+        renderAutoView();
+    }
 };
 
 /**
@@ -459,15 +483,28 @@ window.applicaBozza = function() {
     document.getElementById('mese').classList.remove('hidden');
 
     // Renderizza la vista mese aggiornata
-    renderMese(anno, mese);
+    Promise.all([
+        import('../render/mese.js'),
+        import('../render/coverage-panel.js')
+    ]).then(([meseModule, coverageModule]) => {
+        meseModule.renderMese(anno, mese);
+        console.log('[AUTO-UI] Vista Mese renderizzata con turni applicati');
 
-    alert(
-        `✅ Bozza applicata con successo!\n\n` +
-        `${salvati} turni sono stati salvati definitivamente.\n\n` +
-        `Puoi continuare a modificarli manualmente se necessario.`
-    );
+        // Ricalcola avvisi copertura con turni ufficiali (mostraBozza è false ora)
+        const meseContainer = document.getElementById('mese');
+        if (meseContainer) {
+            coverageModule.renderCoveragePanel(meseContainer, anno, mese);
+            console.log('[AUTO-UI] Avvisi copertura ricalcolati dopo applicazione');
+        }
 
-    console.log('[AUTO-UI] Applicazione bozza completata');
+        alert(
+            `✅ Bozza applicata con successo!\n\n` +
+            `${salvati} turni sono stati salvati definitivamente.\n\n` +
+            `Puoi continuare a modificarli manualmente se necessario.`
+        );
+
+        console.log('[AUTO-UI] Applicazione bozza completata');
+    });
 };
 
 /**
