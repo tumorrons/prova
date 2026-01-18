@@ -340,20 +340,33 @@ function calcolaOreSettimana(turniOperatore, giornoCorrente, turni) {
 
             if (!defTurno) {
                 console.log(`[DEBUG-ORE]     ❌ Turno "${t.codiceTurno}" non trovato in mappa turni!`);
-            } else if (!defTurno.orario) {
-                console.log(`[DEBUG-ORE]     ❌ Turno "${t.codiceTurno}" trovato ma senza proprietà orario:`, Object.keys(defTurno));
-            }
+            } else {
+                // Supporta sia formato vecchio (orario) che nuovo (ingresso/uscita)
+                let oreT = 0;
 
-            if (defTurno && defTurno.orario) {
-                console.log(`[DEBUG-ORE]     ✅ orario="${defTurno.orario}"`);
+                if (defTurno.orario) {
+                    // Formato vecchio: "07:00 – 14:00"
+                    const match = defTurno.orario.match(/(\d+):00\s*[–-]\s*(\d+):00/);
+                    if (match) {
+                        oreT = parseInt(match[2]) - parseInt(match[1]);
+                        console.log(`[DEBUG-ORE]     ✅ orario="${defTurno.orario}" → ${oreT}h`);
+                    }
+                } else if (defTurno.ingresso && defTurno.uscita) {
+                    // Formato nuovo: ingresso: "07:00", uscita: "14:00"
+                    const ingressoMatch = defTurno.ingresso.match(/(\d+):(\d+)/);
+                    const uscitaMatch = defTurno.uscita.match(/(\d+):(\d+)/);
 
-                // Parsing ore dal formato "HH:MM – HH:MM"
-                const match = defTurno.orario.match(/(\d+):00\s*[–-]\s*(\d+):00/);
-                console.log(`[DEBUG-ORE]     regex match:`, match);
+                    if (ingressoMatch && uscitaMatch) {
+                        const ingressoOra = parseInt(ingressoMatch[1]);
+                        const uscitaOra = parseInt(uscitaMatch[1]);
+                        oreT = uscitaOra - ingressoOra;
+                        console.log(`[DEBUG-ORE]     ✅ ingresso="${defTurno.ingresso}", uscita="${defTurno.uscita}" → ${oreT}h`);
+                    }
+                } else {
+                    console.log(`[DEBUG-ORE]     ❌ Turno senza orario/ingresso-uscita:`, Object.keys(defTurno));
+                }
 
-                if (match) {
-                    const oreT = parseInt(match[2]) - parseInt(match[1]);
-                    console.log(`[DEBUG-ORE]     Ore calcolate: ${match[1]} -> ${match[2]} = ${oreT}h`);
+                if (oreT > 0) {
                     ore += oreT;
                 }
             }
