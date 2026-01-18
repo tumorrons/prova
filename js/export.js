@@ -21,10 +21,10 @@ import { getNomeOperatore, getIdOperatore } from './profili.js';
 export function esportaDatiJSON() {
     const backup = {
         metadata: {
-            versione: "2.0",
+            versione: "2.1",
             dataExport: new Date().toISOString(),
             app: "Gestione Turni Ospedale v4.8",
-            descrizione: "Backup completo - include profili, turni, configurazioni, regole"
+            descrizione: "Backup completo - include profili, turni, configurazioni, regole, preferenze"
         },
 
         // Configurazione base
@@ -39,7 +39,13 @@ export function esportaDatiJSON() {
 
         // Regole di coverage
         regole: {
-            copertura: localStorage.getItem('regole_copertura') || '[]'
+            coverageRules: localStorage.getItem('coverageRules') || '[]'
+        },
+
+        // Preferenze UI
+        preferenze: {
+            mesiVisibili: localStorage.getItem('mesiVisibili') || null,
+            vistaAnnoMode: localStorage.getItem('vistaAnnoMode') || null
         },
 
         // Turni assegnati (anno_mese_operatore_giorno)
@@ -60,8 +66,9 @@ export function esportaDatiJSON() {
         const key = localStorage.key(i);
         const value = localStorage.getItem(key);
 
-        // Salta chiavi già gestite nella configurazione
-        if (key === 'operatori' || key === 'ambulatori' || key === 'turni' || key === 'regole_copertura') {
+        // Salta chiavi già gestite nelle sezioni specifiche
+        if (key === 'operatori' || key === 'ambulatori' || key === 'turni' ||
+            key === 'coverageRules' || key === 'mesiVisibili' || key === 'vistaAnnoMode') {
             continue;
         }
 
@@ -77,8 +84,8 @@ export function esportaDatiJSON() {
         else if (key.endsWith('_note')) {
             backup.note[key] = value;
         }
-        // Bozze generazione automatica
-        else if (key.startsWith('bozza_') || key === 'lastGenerationResult') {
+        // Bozze generazione automatica (generatedDraft + bozza_* + lastGenerationResult)
+        else if (key === 'generatedDraft' || key.startsWith('bozza_') || key === 'lastGenerationResult') {
             backup.bozze[key] = value;
         }
         // Altri dati non categorizzati
@@ -92,7 +99,7 @@ export function esportaDatiJSON() {
         numProfili: Object.keys(backup.profili).length,
         numTurniAssegnati: Object.keys(backup.turniAssegnati).length,
         numNote: Object.keys(backup.note).length,
-        numRegole: backup.regole.copertura ? JSON.parse(backup.regole.copertura).length : 0,
+        numRegole: backup.regole.coverageRules ? JSON.parse(backup.regole.coverageRules).length : 0,
         numBozze: Object.keys(backup.bozze).length,
         numOperatori: backup.configurazione.operatori ? JSON.parse(backup.configurazione.operatori).length : 0,
         numAmbulatori: Object.keys(JSON.parse(backup.configurazione.ambulatori || '{}')).length,
@@ -185,12 +192,24 @@ export function importaDatiJSON(jsonString) {
             }
 
             // 3. Regole di copertura
-            if (backup.regole && backup.regole.copertura) {
-                localStorage.setItem('regole_copertura', backup.regole.copertura);
+            if (backup.regole && backup.regole.coverageRules) {
+                localStorage.setItem('coverageRules', backup.regole.coverageRules);
                 importati++;
             }
 
-            // 4. Turni assegnati
+            // 4. Preferenze UI
+            if (backup.preferenze) {
+                if (backup.preferenze.mesiVisibili) {
+                    localStorage.setItem('mesiVisibili', backup.preferenze.mesiVisibili);
+                    importati++;
+                }
+                if (backup.preferenze.vistaAnnoMode) {
+                    localStorage.setItem('vistaAnnoMode', backup.preferenze.vistaAnnoMode);
+                    importati++;
+                }
+            }
+
+            // 5. Turni assegnati
             if (backup.turniAssegnati) {
                 Object.entries(backup.turniAssegnati).forEach(([key, value]) => {
                     localStorage.setItem(key, value);
@@ -198,7 +217,7 @@ export function importaDatiJSON(jsonString) {
                 });
             }
 
-            // 5. Note
+            // 6. Note
             if (backup.note) {
                 Object.entries(backup.note).forEach(([key, value]) => {
                     localStorage.setItem(key, value);
@@ -206,7 +225,7 @@ export function importaDatiJSON(jsonString) {
                 });
             }
 
-            // 6. Bozze
+            // 7. Bozze
             if (backup.bozze) {
                 Object.entries(backup.bozze).forEach(([key, value]) => {
                     localStorage.setItem(key, value);
@@ -214,7 +233,7 @@ export function importaDatiJSON(jsonString) {
                 });
             }
 
-            // 7. Altri dati
+            // 8. Altri dati
             if (backup.altriDati) {
                 Object.entries(backup.altriDati).forEach(([key, value]) => {
                     localStorage.setItem(key, value);
