@@ -176,6 +176,8 @@ function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambu
     // 1. Filtra operatori validi (non inattivi, non assenti, etc.)
     const operatoriValidi = filtraOperatoriValidi(operatori, giorno, codiceTurno, ambulatorio, {});
 
+    console.log(`[DEBUG] Giorno ${giorno} - Candidati validi: ${operatoriValidi.map(p => p.nome).join(', ')}`);
+
     if (operatoriValidi.length === 0) {
         return null;
     }
@@ -185,8 +187,12 @@ function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambu
         // Costruisci context includendo turni già generati nella bozza
         const context = costruisciContext(profilo, giorno, mese, anno, codiceTurno, ambulatorio, bozza);
 
+        console.log(`[DEBUG]   ${profilo.nome}: oreSettimana=${context.oreSettimana}, turniNelMese=${context.turniNelMese}`);
+
         // Calcola score
         const result = calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio, context);
+
+        console.log(`[DEBUG]   ${profilo.nome}: score=${result.totale}, breakdown=`, result.breakdown);
 
         return {
             profilo,
@@ -197,8 +203,12 @@ function trovaMiglioreOperatore(operatori, giorno, mese, anno, codiceTurno, ambu
     // 3. Ordina per score decrescente
     scored.sort((a, b) => b.totale - a.totale);
 
+    console.log(`[DEBUG]   Dopo sort: ${scored.map(s => `${s.profilo.nome}(${s.totale})`).join(', ')}`);
+
     // 4. Prendi il migliore
     const migliore = scored[0];
+
+    console.log(`[DEBUG]   ✅ Scelto: ${migliore.profilo.nome} con score ${migliore.totale}`);
 
     // Se tutti hanno score negativo molto basso, potremmo decidere di non assegnare nessuno
     // (questo dipende dalla politica: meglio un turno con warning o lasciarlo vuoto?)
