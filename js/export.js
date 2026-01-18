@@ -133,9 +133,9 @@ export function importaDatiJSON(jsonString) {
         // Prepara messaggio di conferma con statistiche
         let messaggioConferma = `Importare backup del ${dataBackup}?\n\n⚠️ ATTENZIONE: Tutti i dati attuali saranno sostituiti!\n\n`;
 
-        if (versione === "2.0" && backup.metadata.statistiche) {
+        if (versione.startsWith("2.") && backup.metadata.statistiche) {
             const stats = backup.metadata.statistiche;
-            messaggioConferma += `Statistiche backup:\n`;
+            messaggioConferma += `Statistiche backup (v${versione}):\n`;
             messaggioConferma += `• ${stats.numOperatori} operatori\n`;
             messaggioConferma += `• ${stats.numProfili} profili completi\n`;
             messaggioConferma += `• ${stats.numAmbulatori} ambulatori\n`;
@@ -163,9 +163,9 @@ export function importaDatiJSON(jsonString) {
 
         let importati = 0;
 
-        // Importa in base alla versione
-        if (versione === "2.0") {
-            // Formato v2.0 strutturato
+        // Importa in base alla versione (supporta v2.0, v2.1 e successive)
+        if (versione.startsWith("2.")) {
+            // Formato v2.x strutturato
 
             // 1. Configurazione base
             if (backup.configurazione) {
