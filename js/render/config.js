@@ -17,6 +17,7 @@ import {
     esportaDatiJSON,
     importaDatiJSON,
     esportaTurniAnnoCompleto,
+    esportaTurniXLSX,
     downloadFile,
     generaNomeFile
 } from '../export.js';
@@ -329,13 +330,22 @@ function renderExportImport(container) {
     btnExportJSON.onclick = () => window.esportaBackupJSON();
     exportSection.appendChild(btnExportJSON);
 
-    // Pulsante Export Excel
-    let btnExportExcel = document.createElement("button");
-    btnExportExcel.className = "config-btn config-add";
-    btnExportExcel.textContent = "📊 Esporta Anno Completo (CSV/Excel)";
-    btnExportExcel.style.marginBottom = "8px";
-    btnExportExcel.onclick = () => window.esportaTurniAnnoCompleto();
-    exportSection.appendChild(btnExportExcel);
+    // Pulsante Export CSV
+    let btnExportCSV = document.createElement("button");
+    btnExportCSV.className = "config-btn config-add";
+    btnExportCSV.textContent = "📊 Esporta Anno (CSV)";
+    btnExportCSV.style.marginRight = "8px";
+    btnExportCSV.style.marginBottom = "8px";
+    btnExportCSV.onclick = () => window.esportaTurniAnnoCompleto();
+    exportSection.appendChild(btnExportCSV);
+
+    // Pulsante Export XLSX formattato
+    let btnExportXLSX = document.createElement("button");
+    btnExportXLSX.className = "config-btn config-add";
+    btnExportXLSX.textContent = "📊 Esporta Anno Formattato (Excel XLSX)";
+    btnExportXLSX.style.marginBottom = "8px";
+    btnExportXLSX.onclick = () => window.esportaTurniXLSXFormattato();
+    exportSection.appendChild(btnExportXLSX);
 
     let exportInfo = document.createElement("p");
     exportInfo.className = "info-text";
@@ -344,7 +354,8 @@ function renderExportImport(container) {
     exportInfo.style.marginBottom = "0";
     exportInfo.innerHTML = `
         <strong>JSON:</strong> Backup completo (turni, note, configurazioni, regole)<br>
-        <strong>CSV/Excel:</strong> Tutti i turni dell'anno con note e legenda
+        <strong>CSV:</strong> Tutti i turni dell'anno con note e legenda (testo semplice)<br>
+        <strong>Excel XLSX:</strong> Anno completo con colori, formattazione e legenda
     `;
     exportSection.appendChild(exportInfo);
 
@@ -655,6 +666,16 @@ window.esportaTurniAnnoCompleto = function() {
     } catch (error) {
         alert(`❌ Errore durante l'export: ${error.message}`);
         console.error('[EXPORT] Errore export Excel:', error);
+    }
+};
+
+window.esportaTurniXLSXFormattato = function() {
+    try {
+        esportaTurniXLSX(annoCorrente);
+        alert(`✅ Excel formattato esportato con successo!\n\nContiene:\n• 12 fogli (uno per mese)\n• Celle colorate come nella Vista Mese\n• Note integrate (con *)\n• Foglio Legenda con tutti i turni`);
+    } catch (error) {
+        alert(`❌ Errore durante l'export XLSX: ${error.message}`);
+        console.error('[EXPORT] Errore export XLSX:', error);
     }
 };
 
