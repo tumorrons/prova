@@ -10,8 +10,9 @@
 
 import { generaBozza } from './auto-engine.js';
 import { validaBozza, confidenzaToLabel } from './auto-schema.js';
-import { salvaBozzaGenerazione, caricaBozzaGenerazione, eliminaBozzaGenerazione } from '../storage.js';
+import { salvaBozzaGenerazione, caricaBozzaGenerazione, eliminaBozzaGenerazione, salvaTurno } from '../storage.js';
 import { getState, setMostraBozza, setMeseCorrente, setAnnoCorrente } from '../state.js';
+import { renderMese } from '../render/mese.js';
 
 console.log('🤖 [AUTO-UI] Modulo caricato correttamente');
 
@@ -411,6 +412,11 @@ window.applicaBozza = function() {
         return;
     }
 
+    if (bozza.stato !== 'draft') {
+        alert('Questa bozza è già stata applicata o scartata');
+        return;
+    }
+
     const conferma = confirm(
         `Applicare ${bozza.turni.length} turni generati?\n\n` +
         'I turni verranno salvati definitivamente.\n' +
@@ -418,11 +424,50 @@ window.applicaBozza = function() {
     );
     if (!conferma) return;
 
-    // TODO: Implementare applicazione bozza
-    // Questo richiede modifiche a storage.js per salvare turni multipli
-    alert('Funzione "Applica Bozza" in arrivo nella prossima iterazione!\n\nPer ora puoi:\n- Visualizzare la bozza in Vista Mese\n- Modificare manualmente i turni');
+    console.log('[AUTO-UI] Inizio applicazione bozza:', bozza.turni.length, 'turni');
 
-    console.log('[AUTO-UI] Applicazione bozza richiesta (TODO)');
+    // Salva tutti i turni dalla bozza in localStorage
+    const anno = bozza.periodo.anno;
+    const mese = bozza.periodo.mese;
+    let salvati = 0;
+
+    bozza.turni.forEach(t => {
+        // Formato: "AMBULATORIO_TURNO" (es. "BUD_BM")
+        const valoreTurno = `${t.ambulatorio}_${t.turno}`;
+        salvaTurno(t.operatore, t.giorno, valoreTurno, anno, mese);
+        salvati++;
+    });
+
+    console.log(`[AUTO-UI] Salvati ${salvati} turni in localStorage`);
+
+    // Aggiorna stato bozza a "applied"
+    bozza.stato = 'applied';
+    bozza.metadata.timestampApplicazione = Date.now();
+    salvaBozzaGenerazione(bozza);
+
+    console.log('[AUTO-UI] Bozza marcata come applicata');
+
+    // Nascondi visualizzazione bozza (ora i turni sono reali)
+    setMostraBozza(false);
+
+    // Naviga alla vista mese per mostrare i turni applicati
+    setMeseCorrente(mese);
+    setAnnoCorrente(anno);
+
+    // Cambia vista
+    document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('mese').classList.remove('hidden');
+
+    // Renderizza la vista mese aggiornata
+    renderMese(anno, mese);
+
+    alert(
+        `✅ Bozza applicata con successo!\n\n` +
+        `${salvati} turni sono stati salvati definitivamente.\n\n` +
+        `Puoi continuare a modificarli manualmente se necessario.`
+    );
+
+    console.log('[AUTO-UI] Applicazione bozza completata');
 };
 
 /**
