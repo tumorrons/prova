@@ -149,99 +149,137 @@ export function esportaTurniCSV(anno, mese) {
 }
 
 /**
- * Esporta turni in formato Excel (CSV avanzato con separatore punto e virgola)
- * Migliore compatibilità con Excel italiano
- * @param {number} anno - Anno
- * @param {number} mese - Mese (0-11)
+ * Esporta turni anno intero in formato Excel (CSV) con note e legenda
+ * @param {number} anno - Anno da esportare
  * @param {string} ambulatorioFiltro - Filtra per ambulatorio (opzionale)
  * @returns {string} CSV con separatore ;
  */
-export function esportaTurniExcel(anno, mese, ambulatorioFiltro = "") {
-    const nomeMese = getNomeMese(mese);
-    const giorni = new Date(anno, mese + 1, 0).getDate();
+export function esportaTurniAnnoCompleto(anno, ambulatorioFiltro = "") {
+    let excel = '';
 
-    // Header Excel (separatore ;)
-    let excel = `Operatore`;
-    for (let g = 1; g <= giorni; g++) {
-        excel += `;${g}`;
-    }
-    excel += `;Ore Totali\r\n`;
+    // Per ogni mese dell'anno
+    for (let mese = 0; mese < 12; mese++) {
+        const nomeMese = getNomeMese(mese);
+        const giorni = new Date(anno, mese + 1, 0).getDate();
 
-    // Filtra operatori se necessario
-    let operatoriFiltrati = operatori;
-    if (ambulatorioFiltro) {
-        operatoriFiltrati = operatori.filter(op => {
-            for (let g = 1; g <= giorni; g++) {
-                const opId = typeof op === 'string' ? op : op.cognome;
-                const key = `${anno}_${mese}_${opId}_${g}`;
-                let turnoSalvato = localStorage.getItem(key);
+        // Titolo mese
+        excel += `\r\n${nomeMese.toUpperCase()} ${anno}\r\n`;
+        excel += `Operatore`;
+        for (let g = 1; g <= giorni; g++) {
+            excel += `;${g}`;
+        }
+        excel += `;Ore Totali\r\n`;
 
-                if (turnoSalvato) {
-                    let codiceTurno = turnoSalvato;
-                    let ambulatorioTurno = null;
+        // Righe operatori
+        operatori.forEach(op => {
+            const opNome = getNomeOperatore(op);
+            const opId = typeof op === 'string' ? op : op.cognome;
 
-                    if (turnoSalvato.includes('_')) {
-                        const parts = turnoSalvato.split('_');
-                        ambulatorioTurno = parts[0];
-                        codiceTurno = parts[parts.length - 1];
-                    }
+            // Verifica se operatore ha turni questo mese (se filtrato per ambulatorio)
+            if (ambulatorioFiltro) {
+                let haTurni = false;
+                for (let g = 1; g <= giorni; g++) {
+                    const turnoKey = `${anno}_${mese}_${opId}_${g}`;
+                    const turnoSalvato = localStorage.getItem(turnoKey);
+                    if (turnoSalvato) {
+                        let codiceTurno = turnoSalvato;
+                        let ambulatorioTurno = null;
 
-                    if (turni[codiceTurno]) {
-                        const ambTurno = ambulatorioTurno || turni[codiceTurno].ambulatorio;
-                        if (ambTurno === ambulatorioFiltro) {
-                            return true;
+                        if (turnoSalvato.includes('_')) {
+                            const parts = turnoSalvato.split('_');
+                            ambulatorioTurno = parts[0];
+                            codiceTurno = parts[parts.length - 1];
+                        }
+
+                        if (turni[codiceTurno]) {
+                            const ambTurno = ambulatorioTurno || turni[codiceTurno].ambulatorio;
+                            if (ambTurno === ambulatorioFiltro) {
+                                haTurni = true;
+                                break;
+                            }
                         }
                     }
                 }
+                if (!haTurni) return; // Salta operatore
             }
-            return false;
+
+            excel += `"${opNome}"`;
+
+            let oreTotali = 0;
+
+            for (let g = 1; g <= giorni; g++) {
+                const turnoKey = `${anno}_${mese}_${opId}_${g}`;
+                const noteKey = `${anno}_${mese}_${opId}_${g}_note`;
+
+                let turnoSalvato = localStorage.getItem(turnoKey) || "";
+                let nota = localStorage.getItem(noteKey);
+
+                // Estrai codice turno se nel formato "AMBULATORIO_TURNO"
+                let codiceTurno = turnoSalvato;
+                let ambulatorioTurno = null;
+
+                if (turnoSalvato.includes('_')) {
+                    const parts = turnoSalvato.split('_');
+                    ambulatorioTurno = parts[0];
+                    codiceTurno = parts[parts.length - 1];
+                }
+
+                // Contenuto cella
+                let contenuto = "";
+                if (turnoSalvato && turni[codiceTurno]) {
+                    const turno = turni[codiceTurno];
+                    const ambTurno = ambulatorioTurno || turno.ambulatorio;
+
+                    // Se c'è un filtro ambulatorio, mostra solo turni di quell'ambulatorio
+                    if (!ambulatorioFiltro || ambTurno === ambulatorioFiltro) {
+                        contenuto = codiceTurno;
+
+                        // Calcola ore
+                        const oreMatch = turno.orario.match(/(\d+):00\s*–\s*(\d+):00/);
+                        if (oreMatch) {
+                            const ore = parseInt(oreMatch[2]) - parseInt(oreMatch[1]);
+                            oreTotali += ore;
+                        }
+
+                        // Aggiungi indicatore nota
+                        if (nota) {
+                            contenuto += "*";
+                        }
+                    }
+                } else if (nota) {
+                    // Solo nota senza turno
+                    contenuto = "N";
+                }
+
+                excel += `;${contenuto}`;
+            }
+
+            excel += `;${oreTotali}\r\n`;
         });
+
+        excel += `\r\n`;
     }
 
-    // Righe operatori
-    operatoriFiltrati.forEach(op => {
-        const opNome = getNomeOperatore(op);
-        const opId = typeof op === 'string' ? op : op.cognome;
-        excel += `"${opNome}"`;
+    // Legenda turni
+    excel += `\r\n--- LEGENDA TURNI ---\r\n`;
+    excel += `Codice;Nome;Ambulatorio;Orario;Ore\r\n`;
 
-        let oreTotali = 0;
-
-        for (let g = 1; g <= giorni; g++) {
-            const key = `${anno}_${mese}_${opId}_${g}`;
-            let turnoSalvato = localStorage.getItem(key) || "";
-
-            // Estrai codice turno se nel formato "AMBULATORIO_TURNO"
-            let codiceTurno = turnoSalvato;
-            let ambulatorioTurno = null;
-
-            if (turnoSalvato.includes('_')) {
-                const parts = turnoSalvato.split('_');
-                ambulatorioTurno = parts[0];
-                codiceTurno = parts[parts.length - 1];
-            }
-
-            // Se c'è un filtro ambulatorio, mostra solo turni di quell'ambulatorio
-            let contenuto = "";
-            if (turni[codiceTurno]) {
-                const ambTurno = ambulatorioTurno || turni[codiceTurno].ambulatorio;
-
-                if (!ambulatorioFiltro || ambTurno === ambulatorioFiltro) {
-                    contenuto = codiceTurno;
-
-                    // Calcola ore
-                    const oreMatch = turni[codiceTurno].orario.match(/(\d+):00\s*–\s*(\d+):00/);
-                    if (oreMatch) {
-                        const ore = parseInt(oreMatch[2]) - parseInt(oreMatch[1]);
-                        oreTotali += ore;
-                    }
-                }
-            }
-
-            excel += `;${contenuto}`;
+    Object.entries(turni).forEach(([code, turno]) => {
+        // Se c'è un filtro, mostra solo i turni dell'ambulatorio selezionato
+        if (ambulatorioFiltro && turno.ambulatorio !== ambulatorioFiltro) {
+            return;
         }
 
-        excel += `;${oreTotali}\r\n`;
+        const oreMatch = turno.orario.match(/(\d+):00\s*–\s*(\d+):00/);
+        const ore = oreMatch ? parseInt(oreMatch[2]) - parseInt(oreMatch[1]) : 0;
+
+        excel += `${code};${turno.nome};${ambulatori[turno.ambulatorio]?.nome || turno.ambulatorio};${turno.orario};${ore}h\r\n`;
     });
+
+    excel += `\r\n`;
+    excel += `Note:\r\n`;
+    excel += `* = Presenza di nota (vedere celle specifiche)\r\n`;
+    excel += `N = Giorno con solo nota (senza turno)\r\n`;
 
     return excel;
 }
@@ -284,6 +322,8 @@ export function generaNomeFile(tipo, anno = null, mese = null, ambulatorio = "")
     if (anno && mese !== null) {
         const nomeMese = getNomeMese(mese).toLowerCase();
         nome += `-${nomeMese}-${anno}`;
+    } else if (anno) {
+        nome += `-anno-${anno}`;
     }
 
     if (ambulatorio) {

@@ -16,7 +16,7 @@ import { getNomeOperatore } from '../profili.js';
 import {
     esportaDatiJSON,
     importaDatiJSON,
-    esportaTurniExcel,
+    esportaTurniAnnoCompleto,
     downloadFile,
     generaNomeFile
 } from '../export.js';
@@ -332,9 +332,9 @@ function renderExportImport(container) {
     // Pulsante Export Excel
     let btnExportExcel = document.createElement("button");
     btnExportExcel.className = "config-btn config-add";
-    btnExportExcel.textContent = "📊 Esporta Turni Mese Corrente (CSV/Excel)";
+    btnExportExcel.textContent = "📊 Esporta Anno Completo (CSV/Excel)";
     btnExportExcel.style.marginBottom = "8px";
-    btnExportExcel.onclick = () => window.esportaTurniMeseCorrente();
+    btnExportExcel.onclick = () => window.esportaTurniAnnoCompleto();
     exportSection.appendChild(btnExportExcel);
 
     let exportInfo = document.createElement("p");
@@ -344,7 +344,7 @@ function renderExportImport(container) {
     exportInfo.style.marginBottom = "0";
     exportInfo.innerHTML = `
         <strong>JSON:</strong> Backup completo (turni, note, configurazioni, regole)<br>
-        <strong>CSV/Excel:</strong> Turni del mese corrente in formato tabellare
+        <strong>CSV/Excel:</strong> Tutti i turni dell'anno con note e legenda
     `;
     exportSection.appendChild(exportInfo);
 
@@ -646,12 +646,12 @@ window.esportaBackupJSON = function() {
     }
 };
 
-window.esportaTurniMeseCorrente = function() {
+window.esportaTurniAnnoCompleto = function() {
     try {
-        const csvData = esportaTurniExcel(annoCorrente, meseCorrente);
-        const nomeFile = generaNomeFile('excel', annoCorrente, meseCorrente);
+        const csvData = esportaTurniAnnoCompleto(annoCorrente);
+        const nomeFile = generaNomeFile('excel', annoCorrente);
         downloadFile(csvData, nomeFile, 'text/csv;charset=utf-8;');
-        alert(`✅ Turni esportati con successo!\n\nFile: ${nomeFile}`);
+        alert(`✅ Anno completo esportato con successo!\n\nFile: ${nomeFile}\n\nContiene tutti i 12 mesi con turni, note e legenda.`);
     } catch (error) {
         alert(`❌ Errore durante l'export: ${error.message}`);
         console.error('[EXPORT] Errore export Excel:', error);
