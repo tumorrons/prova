@@ -304,6 +304,26 @@ export function downloadFile(contenuto, nomeFile, mimeType) {
 }
 
 /**
+ * Helper: ottieni nome abbreviato giorno settimana
+ * @param {Date} data
+ * @returns {string} Nome giorno (Lun, Mar, Mer, Gio, Ven, Sab, Dom)
+ */
+function getNomeGiornoSettimana(data) {
+    const nomi = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    return nomi[data.getDay()];
+}
+
+/**
+ * Helper: verifica se giorno è weekend
+ * @param {Date} data
+ * @returns {boolean}
+ */
+function isWeekend(data) {
+    const day = data.getDay();
+    return day === 0 || day === 6; // Domenica o Sabato
+}
+
+/**
  * Esporta turni anno intero in formato XLSX con colori e formattazione
  * @param {number} anno - Anno da esportare
  * @param {string} ambulatorioFiltro - Filtra per ambulatorio (opzionale)
@@ -325,10 +345,12 @@ export function esportaTurniXLSX(anno, ambulatorioFiltro = "") {
         // Crea array di dati per il foglio
         const data = [];
 
-        // Header con giorni
+        // Header con giorni intelligenti (Lun 1, Mar 2, etc)
         const headerRow = ['Operatore'];
         for (let g = 1; g <= giorni; g++) {
-            headerRow.push(g);
+            const dataGiorno = new Date(anno, mese, g);
+            const nomeGiorno = getNomeGiornoSettimana(dataGiorno);
+            headerRow.push(`${nomeGiorno} ${g}`);
         }
         headerRow.push('Ore Totali');
         data.push(headerRow);
@@ -416,9 +438,47 @@ export function esportaTurniXLSX(anno, ambulatorioFiltro = "") {
         // Crea foglio dal array di dati
         const ws = XLSX.utils.aoa_to_sheet(data);
 
-        // Applica formattazione colori alle celle
+        // Applica formattazione colori e stili alle celle
         const range = XLSX.utils.decode_range(ws['!ref']);
 
+        // Stile header (riga 0)
+        for (let C = 0; C <= range.e.c; C++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+            const cell = ws[cellAddress];
+            if (!cell) continue;
+
+            // Verifica se è weekend per questa colonna
+            let isWeekendCol = false;
+            if (C > 0 && C <= giorni) {
+                const g = C;
+                const dataGiorno = new Date(anno, mese, g);
+                isWeekendCol = isWeekend(dataGiorno);
+            }
+
+            cell.s = {
+                fill: {
+                    patternType: "solid",
+                    fgColor: { rgb: isWeekendCol ? "FFE0E0E0" : "FF4A90E2" }
+                },
+                font: {
+                    color: { rgb: isWeekendCol ? "FF333333" : "FFFFFFFF" },
+                    bold: true,
+                    sz: 11
+                },
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                },
+                border: {
+                    top: { style: "medium", color: { rgb: "FF333333" } },
+                    bottom: { style: "medium", color: { rgb: "FF333333" } },
+                    left: { style: "thin", color: { rgb: "FFCCCCCC" } },
+                    right: { style: "thin", color: { rgb: "FFCCCCCC" } }
+                }
+            };
+        }
+
+        // Stile celle operatori e turni
         for (let R = 1; R <= range.e.r; R++) { // Salta header (R=0)
             const opIdx = R - 1;
             const op = operatori[opIdx];
@@ -426,15 +486,104 @@ export function esportaTurniXLSX(anno, ambulatorioFiltro = "") {
 
             const opId = getIdOperatore(op);
 
-            for (let C = 1; C <= giorni; C++) { // Salta colonna operatore
+            for (let C = 0; C <= range.e.c; C++) {
                 const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                const cell = ws[cellAddress];
-                if (!cell || !cell.v) continue;
+                let cell = ws[cellAddress];
+                if (!cell) {
+                    // Crea cella vuota per applicare bordi
+                    ws[cellAddress] = { t: 's', v: '' };
+                    cell = ws[cellAddress];
+                }
 
+                // Stile base per tutte le celle
+                const isColonnaOperatore = (C === 0);
+                const isColonnaOreTotali = (C === range.e.c);
+
+                // Verifica se è weekend
+                let isWeekendCol = false;
+                if (C > 0 && C <= giorni) {
+                    const g = C;
+                    const dataGiorno = new Date(anno, mese, g);
+                    isWeekendCol = isWeekend(dataGiorno);
+                }
+
+                // Stile colonna operatore
+                if (isColonnaOperatore) {
+                    cell.s = {
+                        fill: {
+                            patternType: "solid",
+                            fgColor: { rgb: "FFF5F5F5" }
+                        },
+                        font: {
+                            bold: true,
+                            sz: 10
+                        },
+                        alignment: {
+                            horizontal: "left",
+                            vertical: "center"
+                        },
+                        border: {
+                            top: { style: "thin", color: { rgb: "FFCCCCCC" } },
+                            bottom: { style: "thin", color: { rgb: "FFCCCCCC" } },
+                            left: { style: "medium", color: { rgb: "FF333333" } },
+                            right: { style: "medium", color: { rgb: "FF999999" } }
+                        }
+                    };
+                    continue;
+                }
+
+                // Stile colonna ore totali
+                if (isColonnaOreTotali) {
+                    cell.s = {
+                        fill: {
+                            patternType: "solid",
+                            fgColor: { rgb: "FFF5F5F5" }
+                        },
+                        font: {
+                            bold: true,
+                            sz: 10
+                        },
+                        alignment: {
+                            horizontal: "center",
+                            vertical: "center"
+                        },
+                        border: {
+                            top: { style: "thin", color: { rgb: "FFCCCCCC" } },
+                            bottom: { style: "thin", color: { rgb: "FFCCCCCC" } },
+                            left: { style: "medium", color: { rgb: "FF999999" } },
+                            right: { style: "medium", color: { rgb: "FF333333" } }
+                        }
+                    };
+                    continue;
+                }
+
+                // Celle giorni (turni)
                 const g = C;
                 const turnoKey = `${anno}_${mese}_${opId}_${g}`;
                 let turnoSalvato = localStorage.getItem(turnoKey);
 
+                // Stile base per cella giorno
+                let cellStyle = {
+                    fill: {
+                        patternType: "solid",
+                        fgColor: { rgb: isWeekendCol ? "FFFFF0F0" : "FFFFFFFF" }
+                    },
+                    font: {
+                        sz: 10
+                    },
+                    alignment: {
+                        horizontal: "center",
+                        vertical: "center"
+                    },
+                    border: {
+                        top: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                        bottom: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                        left: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                        right: { style: "thin", color: { rgb: "FFDDDDDD" } }
+                    }
+                };
+
+                // Se c'è un turno, applica colore del turno
                 if (turnoSalvato) {
                     let codiceTurno = turnoSalvato;
                     if (turnoSalvato.includes('_')) {
@@ -448,32 +597,49 @@ export function esportaTurniXLSX(anno, ambulatorioFiltro = "") {
                         // Converti colore hex in RGB per Excel
                         const hexColor = turno.colore.replace('#', '');
 
-                        cell.s = {
+                        cellStyle = {
                             fill: {
                                 patternType: "solid",
                                 fgColor: { rgb: hexColor }
                             },
                             font: {
-                                color: { rgb: "FFFFFF" },
-                                bold: true
+                                color: { rgb: "FFFFFFFF" },
+                                bold: true,
+                                sz: 11
                             },
                             alignment: {
                                 horizontal: "center",
                                 vertical: "center"
+                            },
+                            border: {
+                                top: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                                bottom: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                                left: { style: "thin", color: { rgb: "FFDDDDDD" } },
+                                right: { style: "thin", color: { rgb: "FFDDDDDD" } }
                             }
                         };
                     }
                 }
+
+                cell.s = cellStyle;
             }
         }
 
-        // Imposta larghezza colonne
-        const cols = [{ wch: 20 }]; // Colonna operatore
+        // Imposta larghezza colonne (celle a blocco)
+        const cols = [{ wch: 20 }]; // Colonna operatore più larga
         for (let i = 0; i < giorni; i++) {
-            cols.push({ wch: 5 }); // Colonne giorni
+            cols.push({ wch: 8 }); // Colonne giorni: larghezza fissa per aspetto "blocco"
         }
         cols.push({ wch: 10 }); // Colonna ore totali
         ws['!cols'] = cols;
+
+        // Imposta altezza righe (celle a blocco)
+        const rows = [];
+        rows.push({ hpx: 30 }); // Header più alto
+        for (let i = 0; i < range.e.r; i++) {
+            rows.push({ hpx: 28 }); // Righe operatori: altezza fissa per aspetto "blocco"
+        }
+        ws['!rows'] = rows;
 
         // Aggiungi foglio al workbook
         XLSX.utils.book_append_sheet(wb, ws, nomeMese);
