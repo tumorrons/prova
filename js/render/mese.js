@@ -150,8 +150,15 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
             let cellStyle = "cursor:pointer;";
             let cellClass = ""; // Classe per turni auto-generati
 
-            if (turnoSalvato && turni[turnoSalvato]) {
-                cellStyle += `background:${turni[turnoSalvato].colore};color:white;font-weight:bold`;
+            // Estrai codice turno da formato "AMBULATORIO_TURNO" se necessario
+            let codiceTurno = turnoSalvato;
+            if (turnoSalvato && turnoSalvato.includes('_')) {
+                const parts = turnoSalvato.split('_');
+                codiceTurno = parts[parts.length - 1]; // Prende ultima parte (es. "BM" da "BUD_BM")
+            }
+
+            if (turnoSalvato && turni[codiceTurno]) {
+                cellStyle += `background:${turni[codiceTurno].colore};color:white;font-weight:bold`;
 
                 // Classe per pattern a righe se auto-generato
                 if (origine === 'auto') {
@@ -183,17 +190,17 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
                 }
             }
 
-            let contenuto = turnoSalvato || g;
+            let contenuto = codiceTurno || g;
 
             if (nota && nota.testo) {
                 contenuto += `<span class="note-badge">N</span>`;
             }
 
             let tooltipText = "";
-            if (turnoSalvato && turni[turnoSalvato]) {
+            if (turnoSalvato && turni[codiceTurno]) {
                 const orarioDettaglio = getOrarioDettaglioTurno(turnoSalvato, ambulatori);
                 const oreCalcolate = calcolaOreTurno(turnoSalvato);
-                tooltipText = `${turni[turnoSalvato].nome} • ${orarioDettaglio} • ${oreCalcolate}h`;
+                tooltipText = `${turni[codiceTurno].nome} • ${orarioDettaglio} • ${oreCalcolate}h`;
 
                 // Info turno auto-generato
                 if (origine === 'auto') {
