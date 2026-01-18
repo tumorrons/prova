@@ -5,7 +5,7 @@
  */
 
 import { verificaMese, contaAvvisi, caricaRegole } from '../coverage.js';
-import { ambulatori, turni } from '../state.js';
+import { ambulatori, turni, viewMode } from '../state.js';
 import { getNomeMese } from '../calendar.js';
 
 /**
@@ -46,7 +46,9 @@ export function renderCoveragePanel(container, anno, mese) {
     header.style.marginBottom = "15px";
 
     const title = document.createElement("h4");
-    title.textContent = "⚠️ Avvisi Copertura Turni";
+    title.textContent = viewMode.mostraBozza
+        ? "⚠️ Avvisi Copertura Turni (bozza)"
+        : "⚠️ Avvisi Copertura Turni";
     title.style.margin = "0";
     title.style.color = "#e65100";
 

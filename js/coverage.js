@@ -6,9 +6,56 @@
  */
 
 import { giorniNelMese } from './calendar.js';
-import { caricaTurno } from './storage.js';
-import { operatori, turni } from './state.js';
+import { caricaTurno, caricaBozzaGenerazione } from './storage.js';
+import { operatori, turni, viewMode } from './state.js';
 import { defaultCoverageRules } from './coverage.config.js';
+import { getIdOperatore } from './profili.js';
+
+/**
+ * Restituisce il turno visibile per un operatore in un giorno specifico.
+ * Se viewMode.mostraBozza è attivo, controlla prima la bozza, altrimenti usa i turni ufficiali.
+ *
+ * @param {Object|string} operatore - Operatore (profilo o stringa)
+ * @param {number} giorno - Giorno del mese (1-31)
+ * @param {number} anno - Anno
+ * @param {number} mese - Mese (0-11)
+ * @returns {string|null} - Codice turno o null
+ */
+function getTurnoVisibile(operatore, giorno, anno, mese) {
+    // Turno ufficiale da localStorage
+    const turnoUfficiale = caricaTurno(operatore, giorno, anno, mese);
+
+    // Se non stiamo mostrando la bozza, ritorna solo il turno ufficiale
+    if (!viewMode.mostraBozza) {
+        return turnoUfficiale;
+    }
+
+    // Carica la bozza
+    const bozza = caricaBozzaGenerazione();
+    if (!bozza || bozza.stato !== 'draft') {
+        return turnoUfficiale;
+    }
+
+    // Verifica se la bozza è per questo periodo
+    if (bozza.periodo.anno !== anno || bozza.periodo.mese !== mese) {
+        return turnoUfficiale;
+    }
+
+    // Cerca turno nella bozza per questo operatore e giorno
+    const opId = getIdOperatore(operatore);
+    const turnoBozza = bozza.turni.find(t =>
+        t.giorno === giorno && t.operatore === opId
+    );
+
+    // Se esiste nella bozza, usa quello (con priorità su turno ufficiale)
+    if (turnoBozza) {
+        // Costruisce il codice turno nel formato "AMBULATORIO_TURNO" usato da localStorage
+        return `${turnoBozza.ambulatorio}_${turnoBozza.turno}`;
+    }
+
+    // Altrimenti usa il turno ufficiale
+    return turnoUfficiale;
+}
 
 /**
  * Verifica se una regola si applica a un giorno specifico
@@ -52,8 +99,9 @@ export function verificaTurniRichiesti(regola, giorno, anno, mese) {
         let count = 0;
 
         // Conta quanti operatori hanno quel turno in quel giorno
+        // Usa getTurnoVisibile invece di caricaTurno per considerare anche la bozza
         operatori.forEach(op => {
-            const turnoAssegnato = caricaTurno(op, giorno, anno, mese);
+            const turnoAssegnato = getTurnoVisibile(op, giorno, anno, mese);
             if (turnoAssegnato === requisito.turno) {
                 // Verifica anche che sia dell'ambulatorio giusto
                 const turnoObj = turni[turnoAssegnato];
