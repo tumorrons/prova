@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sistema Assenze</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .log {
+            margin: 10px 0;
+            padding: 8px;
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Sistema Assenze</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Creazione e Storage Assenze</h2>
+        <button onclick="test1()">Esegui Test 1</button>
+        <div id="test1-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Verifica Disponibilità Operatore</h2>
+        <button onclick="test2()">Esegui Test 2</button>
+        <div id="test2-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Assenze HARD vs SOFT</h2>
+        <button onclick="test3()">Esegui Test 3</button>
+        <div id="test3-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Integrazione con Auto-Scoring</h2>
+        <button onclick="test4()">Esegui Test 4</button>
+        <div id="test4-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Reset Dati</h2>
+        <button onclick="resetData()" style="background: #f44336;">Elimina Tutte le Assenze</button>
+        <div id="reset-output"></div>
+    </div>
+
+    <script type="module">
+        import { creaAssenza, TipoAssenza, validaAssenza, dataToString } from './js/absences-schema.js';
+        import {
+            aggiungiAssenza,
+            caricaAssenze,
+            assenzePerOperatoreEData,
+            eliminaTutteLeAssenze
+        } from './js/absences-storage.js';
+        import { operatoreDisponibile } from './js/availability.js';
+        import { calcolaScoreOperatore } from './js/auto/auto-scoring.js';
+
+        window.log = (containerId, message, isError = false) => {
+            const container = document.getElementById(containerId);
+            const className = isError ? 'error' : 'success';
+            container.innerHTML += `<div class="log ${className}">${message}</div>`;
+        };
+
+        window.test1 = () => {
+            const output = document.getElementById('test1-output');
+            output.innerHTML = '<h3>Esecuzione...</h3>';
+
+            try {
+                // Crea assenza di test
+                const assenza = creaAssenza({
+                    tipo: 'FERIE',
+                    operatore: 'op1',
+                    dataInizio: '2026-01-20',
+                    dataFine: '2026-01-24',
+                    note: 'Test ferie'
+                });
+
+                log('test1-output', '✅ Assenza creata: ' + JSON.stringify(assenza, null, 2));
+
+                // Valida
+                const { valida, errori } = validaAssenza(assenza);
+                if (valida) {
+                    log('test1-output', '✅ Validazione OK');
+                } else {
+                    log('test1-output', '❌ Validazione fallita: ' + errori.join(', '), true);
+                    return;
+                }
+
+                // Salva
+                aggiungiAssenza(assenza);
+                log('test1-output', '✅ Assenza salvata in localStorage');
+
+                // Ricarica
+                const assenze = caricaAssenze();
+                log('test1-output', `✅ Ricaricamento OK: ${assenze.length} assenze trovate`);
+
+                log('test1-output', '<strong>✅ TEST 1 SUPERATO</strong>');
+            } catch (e) {
+                log('test1-output', '❌ Errore: ' + e.message, true);
+            }
+        };
+
+        window.test2 = () => {
+            const output = document.getElementById('test2-output');
+            output.innerHTML = '<h3>Esecuzione...</h3>';
+
+            try {
+                // Crea assenza per oggi
+                const oggi = new Date();
+                const dataOggi = dataToString(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+
+                const assenza = creaAssenza({
+                    tipo: 'LEGGE_104',
+                    operatore: 'op2',
+                    dataInizio: dataOggi,
+                    dataFine: dataOggi,
+                    note: 'Test disponibilità'
+                });
+
+                aggiungiAssenza(assenza);
+                log('test2-output', '✅ Assenza Legge 104 creata per oggi');
+
+                // Verifica disponibilità
+                const { disponibile, motivo, penalita, soft } = operatoreDisponibile(
+                    'op2',
+                    oggi.getFullYear(),
+                    oggi.getMonth(),
+                    oggi.getDate()
+                );
+
+                log('test2-output', `Disponibile: ${disponibile}`);
+                log('test2-output', `Motivo: ${motivo}`);
+                log('test2-output', `Penalità: ${penalita}`);
+                log('test2-output', `Soft: ${soft}`);
+
+                if (!disponibile && motivo.includes('Legge 104')) {
+                    log('test2-output', '<strong>✅ TEST 2 SUPERATO - Operatore correttamente bloccato</strong>');
+                } else {
+                    log('test2-output', '❌ TEST 2 FALLITO - Operatore dovrebbe essere bloccato', true);
+                }
+            } catch (e) {
+                log('test2-output', '❌ Errore: ' + e.message, true);
+            }
+        };
+
+        window.test3 = () => {
+            const output = document.getElementById('test3-output');
+            output.innerHTML = '<h3>Esecuzione...</h3>';
+
+            try {
+                const oggi = new Date();
+                const dataOggi = dataToString(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+
+                // Test HARD: FERIE
+                const ferie = creaAssenza({
+                    tipo: 'FERIE',
+                    operatore: 'op3',
+                    dataInizio: dataOggi,
+                    dataFine: dataOggi
+                });
+                aggiungiAssenza(ferie);
+
+                const resHard = operatoreDisponibile('op3', oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+                log('test3-output', `HARD (Ferie) - Disponibile: ${resHard.disponibile}, Soft: ${resHard.soft}`);
+
+                if (!resHard.disponibile && !resHard.soft) {
+                    log('test3-output', '✅ Assenza HARD blocca correttamente');
+                } else {
+                    log('test3-output', '❌ Assenza HARD non blocca!', true);
+                }
+
+                // Test SOFT: GIORNO_LIBERO
+                const giornoLibero = creaAssenza({
+                    tipo: 'GIORNO_LIBERO',
+                    operatore: 'op4',
+                    dataInizio: dataOggi,
+                    dataFine: dataOggi
+                });
+                aggiungiAssenza(giornoLibero);
+
+                const resSoft = operatoreDisponibile('op4', oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+                log('test3-output', `SOFT (Giorno Libero) - Disponibile: ${resSoft.disponibile}, Soft: ${resSoft.soft}, Penalità: ${resSoft.penalita}`);
+
+                if (resSoft.disponibile && resSoft.soft && resSoft.penalita > 0) {
+                    log('test3-output', '✅ Assenza SOFT permette assegnazione con penalità');
+                    log('test3-output', '<strong>✅ TEST 3 SUPERATO</strong>');
+                } else {
+                    log('test3-output', '❌ Assenza SOFT non funziona correttamente!', true);
+                }
+            } catch (e) {
+                log('test3-output', '❌ Errore: ' + e.message, true);
+            }
+        };
+
+        window.test4 = () => {
+            const output = document.getElementById('test4-output');
+            output.innerHTML = '<h3>Esecuzione...</h3>';
+
+            try {
+                const oggi = new Date();
+                const dataOggi = dataToString(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+
+                // Crea profilo operatore di test
+                const profilo = {
+                    id: 'op5',
+                    nome: 'Test Operatore',
+                    sedePrincipale: 'BUD'
+                };
+
+                // Calcola score SENZA assenza
+                const scoreSenza = calcolaScoreOperatore(profilo, oggi.getDate(), 'BM', 'BUD', {
+                    anno: oggi.getFullYear(),
+                    mese: oggi.getMonth(),
+                    oreSettimana: 0
+                });
+
+                log('test4-output', `Score SENZA assenza: ${scoreSenza.totale}`);
+                log('test4-output', `Breakdown: ${JSON.stringify(scoreSenza.breakdown)}`);
+
+                // Aggiungi giorno libero (soft)
+                const giornoLibero = creaAssenza({
+                    tipo: 'GIORNO_LIBERO',
+                    operatore: 'op5',
+                    dataInizio: dataOggi,
+                    dataFine: dataOggi
+                });
+                aggiungiAssenza(giornoLibero);
+
+                // Calcola score CON assenza soft
+                const scoreCon = calcolaScoreOperatore(profilo, oggi.getDate(), 'BM', 'BUD', {
+                    anno: oggi.getFullYear(),
+                    mese: oggi.getMonth(),
+                    oreSettimana: 0
+                });
+
+                log('test4-output', `Score CON assenza soft: ${scoreCon.totale}`);
+                log('test4-output', `Breakdown: ${JSON.stringify(scoreCon.breakdown)}`);
+
+                // Verifica che lo score sia diminuito
+                if (scoreCon.totale < scoreSenza.totale) {
+                    log('test4-output', `✅ Score ridotto correttamente di ${scoreSenza.totale - scoreCon.totale} punti`);
+                    log('test4-output', '<strong>✅ TEST 4 SUPERATO - Integrazione con auto-scoring OK</strong>');
+                } else {
+                    log('test4-output', '❌ Score non ridotto!', true);
+                }
+            } catch (e) {
+                log('test4-output', '❌ Errore: ' + e.message, true);
+            }
+        };
+
+        window.resetData = () => {
+            const output = document.getElementById('reset-output');
+            output.innerHTML = '';
+
+            if (confirm('Sei sicuro di voler eliminare TUTTE le assenze? Questa azione non è reversibile!')) {
+                eliminaTutteLeAssenze();
+                log('reset-output', '✅ Tutte le assenze sono state eliminate');
+            }
+        };
+    </script>
+</body>
+</html>
