@@ -13,32 +13,97 @@ import { getNomeMese } from './calendar.js';
 import { getNomeOperatore, getIdOperatore } from './profili.js';
 
 /**
- * Esporta tutti i dati da localStorage in formato JSON
- * Include: turni, note, configurazioni, regole, bozze
- * @returns {string} JSON completo
+ * Esporta tutti i dati da localStorage in formato JSON strutturato
+ * Include: profili, turni, note, ambulatori, configurazioni, regole, bozze
+ * Backup completo per ripristino su altro PC
+ * @returns {string} JSON completo strutturato
  */
 export function esportaDatiJSON() {
     const backup = {
         metadata: {
-            versione: "1.0",
+            versione: "2.0",
             dataExport: new Date().toISOString(),
-            app: "Gestione Turni Ospedale v4.4"
+            app: "Gestione Turni Ospedale v4.8",
+            descrizione: "Backup completo - include profili, turni, configurazioni, regole"
         },
-        dati: {}
+
+        // Configurazione base
+        configurazione: {
+            operatori: localStorage.getItem('operatori') || '[]',
+            ambulatori: localStorage.getItem('ambulatori') || '{}',
+            turni: localStorage.getItem('turni') || '{}'
+        },
+
+        // Profili operatori completi
+        profili: {},
+
+        // Regole di coverage
+        regole: {
+            copertura: localStorage.getItem('regole_copertura') || '[]'
+        },
+
+        // Turni assegnati (anno_mese_operatore_giorno)
+        turniAssegnati: {},
+
+        // Note associate ai turni
+        note: {},
+
+        // Bozze generazione automatica
+        bozze: {},
+
+        // Altri dati (tutto il resto di localStorage)
+        altriDati: {}
     };
 
-    // Copia tutto localStorage
+    // Raccogli tutti i dati da localStorage
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         const value = localStorage.getItem(key);
-        backup.dati[key] = value;
+
+        // Salta chiavi già gestite nella configurazione
+        if (key === 'operatori' || key === 'ambulatori' || key === 'turni' || key === 'regole_copertura') {
+            continue;
+        }
+
+        // Profili operatori (formato: profilo_ID)
+        if (key.startsWith('profilo_')) {
+            backup.profili[key] = value;
+        }
+        // Turni assegnati (formato: anno_mese_operatore_giorno)
+        else if (/^\d{4}_\d{1,2}_[^_]+_\d{1,2}$/.test(key)) {
+            backup.turniAssegnati[key] = value;
+        }
+        // Note (formato: anno_mese_operatore_giorno_note)
+        else if (key.endsWith('_note')) {
+            backup.note[key] = value;
+        }
+        // Bozze generazione automatica
+        else if (key.startsWith('bozza_') || key === 'lastGenerationResult') {
+            backup.bozze[key] = value;
+        }
+        // Altri dati non categorizzati
+        else {
+            backup.altriDati[key] = value;
+        }
     }
+
+    // Aggiungi statistiche al metadata
+    backup.metadata.statistiche = {
+        numProfili: Object.keys(backup.profili).length,
+        numTurniAssegnati: Object.keys(backup.turniAssegnati).length,
+        numNote: Object.keys(backup.note).length,
+        numRegole: backup.regole.copertura ? JSON.parse(backup.regole.copertura).length : 0,
+        numBozze: Object.keys(backup.bozze).length,
+        numOperatori: backup.configurazione.operatori ? JSON.parse(backup.configurazione.operatori).length : 0,
+        numAmbulatori: Object.keys(JSON.parse(backup.configurazione.ambulatori || '{}')).length,
+        numTipiTurno: Object.keys(JSON.parse(backup.configurazione.turni || '{}')).length
+    };
 
     return JSON.stringify(backup, null, 2);
 }
 
 /**
- * Importa dati da JSON backup
+ * Importa dati da JSON backup (supporta sia formato v1.0 che v2.0)
  * @param {string} jsonString - JSON da importare
  * @returns {{successo: boolean, messaggio: string, importati: number}}
  */
@@ -46,21 +111,37 @@ export function importaDatiJSON(jsonString) {
     try {
         const backup = JSON.parse(jsonString);
 
-        // Valida struttura
-        if (!backup.metadata || !backup.dati) {
+        // Valida struttura base
+        if (!backup.metadata) {
             return {
                 successo: false,
-                messaggio: "Formato JSON non valido: struttura mancante",
+                messaggio: "Formato JSON non valido: metadata mancante",
                 importati: 0
             };
         }
 
-        // Conferma prima di sovrascrivere
-        const conferma = confirm(
-            `Importare backup del ${new Date(backup.metadata.dataExport).toLocaleString('it-IT')}?\n\n` +
-            `⚠️ ATTENZIONE: Tutti i dati attuali saranno sostituiti!\n\n` +
-            `Numero di chiavi da importare: ${Object.keys(backup.dati).length}`
-        );
+        const versione = backup.metadata.versione || "1.0";
+        const dataBackup = new Date(backup.metadata.dataExport).toLocaleString('it-IT');
+
+        // Prepara messaggio di conferma con statistiche
+        let messaggioConferma = `Importare backup del ${dataBackup}?\n\n⚠️ ATTENZIONE: Tutti i dati attuali saranno sostituiti!\n\n`;
+
+        if (versione === "2.0" && backup.metadata.statistiche) {
+            const stats = backup.metadata.statistiche;
+            messaggioConferma += `Statistiche backup:\n`;
+            messaggioConferma += `• ${stats.numOperatori} operatori\n`;
+            messaggioConferma += `• ${stats.numProfili} profili completi\n`;
+            messaggioConferma += `• ${stats.numAmbulatori} ambulatori\n`;
+            messaggioConferma += `• ${stats.numTipiTurno} tipi di turno\n`;
+            messaggioConferma += `• ${stats.numTurniAssegnati} turni assegnati\n`;
+            messaggioConferma += `• ${stats.numNote} note\n`;
+            messaggioConferma += `• ${stats.numRegole} regole di copertura\n`;
+        } else if (backup.dati) {
+            messaggioConferma += `Formato backup v1.0\n`;
+            messaggioConferma += `Chiavi da importare: ${Object.keys(backup.dati).length}`;
+        }
+
+        const conferma = confirm(messaggioConferma);
 
         if (!conferma) {
             return {
@@ -73,23 +154,100 @@ export function importaDatiJSON(jsonString) {
         // Cancella localStorage attuale
         localStorage.clear();
 
-        // Importa tutti i dati
         let importati = 0;
-        Object.entries(backup.dati).forEach(([key, value]) => {
-            localStorage.setItem(key, value);
-            importati++;
-        });
+
+        // Importa in base alla versione
+        if (versione === "2.0") {
+            // Formato v2.0 strutturato
+
+            // 1. Configurazione base
+            if (backup.configurazione) {
+                if (backup.configurazione.operatori) {
+                    localStorage.setItem('operatori', backup.configurazione.operatori);
+                    importati++;
+                }
+                if (backup.configurazione.ambulatori) {
+                    localStorage.setItem('ambulatori', backup.configurazione.ambulatori);
+                    importati++;
+                }
+                if (backup.configurazione.turni) {
+                    localStorage.setItem('turni', backup.configurazione.turni);
+                    importati++;
+                }
+            }
+
+            // 2. Profili operatori
+            if (backup.profili) {
+                Object.entries(backup.profili).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                    importati++;
+                });
+            }
+
+            // 3. Regole di copertura
+            if (backup.regole && backup.regole.copertura) {
+                localStorage.setItem('regole_copertura', backup.regole.copertura);
+                importati++;
+            }
+
+            // 4. Turni assegnati
+            if (backup.turniAssegnati) {
+                Object.entries(backup.turniAssegnati).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                    importati++;
+                });
+            }
+
+            // 5. Note
+            if (backup.note) {
+                Object.entries(backup.note).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                    importati++;
+                });
+            }
+
+            // 6. Bozze
+            if (backup.bozze) {
+                Object.entries(backup.bozze).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                    importati++;
+                });
+            }
+
+            // 7. Altri dati
+            if (backup.altriDati) {
+                Object.entries(backup.altriDati).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                    importati++;
+                });
+            }
+
+        } else {
+            // Formato v1.0 (retrocompatibilità)
+            if (!backup.dati) {
+                return {
+                    successo: false,
+                    messaggio: "Formato JSON v1.0 non valido: campo 'dati' mancante",
+                    importati: 0
+                };
+            }
+
+            Object.entries(backup.dati).forEach(([key, value]) => {
+                localStorage.setItem(key, value);
+                importati++;
+            });
+        }
 
         return {
             successo: true,
-            messaggio: `Backup importato con successo!\nData backup: ${new Date(backup.metadata.dataExport).toLocaleString('it-IT')}`,
+            messaggio: `✅ Backup importato con successo!\n\nData backup: ${dataBackup}\nVersione: ${versione}\nChiavi importate: ${importati}`,
             importati
         };
 
     } catch (error) {
         return {
             successo: false,
-            messaggio: `Errore durante l'importazione: ${error.message}`,
+            messaggio: `❌ Errore durante l'importazione: ${error.message}`,
             importati: 0
         };
     }

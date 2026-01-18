@@ -353,9 +353,11 @@ function renderExportImport(container) {
     exportInfo.style.marginTop = "10px";
     exportInfo.style.marginBottom = "0";
     exportInfo.innerHTML = `
-        <strong>JSON:</strong> Backup completo (turni, note, configurazioni, regole)<br>
-        <strong>CSV:</strong> Tutti i turni dell'anno con note e legenda (testo semplice)<br>
-        <strong>Excel XLSX:</strong> Anno completo con colori, formattazione e legenda
+        <strong>💾 JSON (Backup Completo):</strong> Include TUTTO per ripristinare l'app su altro PC:<br>
+        • Profili operatori completi • Ambulatori e turni configurati<br>
+        • Regole di copertura • Tutti i turni assegnati • Note • Bozze<br><br>
+        <strong>📊 CSV:</strong> Solo turni dell'anno (testo semplice, per import/analisi)<br>
+        <strong>📊 Excel XLSX:</strong> Anno completo con colori e formattazione (stampabile)
     `;
     exportSection.appendChild(exportInfo);
 
@@ -648,9 +650,26 @@ window.pulisciTuttiTurniUI = function() {
 window.esportaBackupJSON = function() {
     try {
         const jsonData = esportaDatiJSON();
+        const backup = JSON.parse(jsonData);
         const nomeFile = generaNomeFile('json');
         downloadFile(jsonData, nomeFile, 'application/json');
-        alert(`✅ Backup esportato con successo!\n\nFile: ${nomeFile}`);
+
+        // Messaggio dettagliato con statistiche
+        let messaggio = `✅ Backup completo esportato!\n\nFile: ${nomeFile}\n\n`;
+
+        if (backup.metadata && backup.metadata.statistiche) {
+            const s = backup.metadata.statistiche;
+            messaggio += `Contenuto backup:\n`;
+            messaggio += `• ${s.numOperatori} operatori (${s.numProfili} profili completi)\n`;
+            messaggio += `• ${s.numAmbulatori} ambulatori\n`;
+            messaggio += `• ${s.numTipiTurno} tipi di turno configurati\n`;
+            messaggio += `• ${s.numTurniAssegnati} turni assegnati\n`;
+            messaggio += `• ${s.numNote} note\n`;
+            messaggio += `• ${s.numRegole} regole di copertura\n`;
+            messaggio += `\n📦 Questo file contiene TUTTO il necessario per ripristinare l'applicazione su un altro PC.`;
+        }
+
+        alert(messaggio);
     } catch (error) {
         alert(`❌ Errore durante l'export: ${error.message}`);
         console.error('[EXPORT] Errore export JSON:', error);
