@@ -2,7 +2,7 @@
  * render/config.js - Rendering vista configurazione
  */
 
-import { operatori, turni, ambulatori } from '../state.js';
+import { operatori, turni, ambulatori, annoCorrente, meseCorrente } from '../state.js';
 import {
     caricaOperatori, salvaOperatori, // aggiungiOperatore, rimuoviOperatore (gestiti da profili-config),
     caricaAmbulatori, salvaAmbulatori, aggiungiAmbulatorio, rimuoviAmbulatorio,
@@ -13,6 +13,13 @@ import { calcolaMinutiTurno, calcolaOreTurno, validaOrario } from '../turni.js';
 import { renderCoverageConfigSection } from './coverage-config.js';
 import { renderProfiliConfigSection } from './profili-config.js';
 import { getNomeOperatore } from '../profili.js';
+import {
+    esportaDatiJSON,
+    importaDatiJSON,
+    esportaTurniExcel,
+    downloadFile,
+    generaNomeFile
+} from '../export.js';
 
 export function renderConfig() {
     const container = document.getElementById("config");
@@ -32,6 +39,9 @@ export function renderConfig() {
 
     // Sezione Turni
     renderConfigTurni(container);
+
+    // Sezione Export/Import
+    renderExportImport(container);
 
     // Sezione Azioni Globali
     renderConfigAzioni(container);
@@ -287,6 +297,103 @@ function renderFormTurno(container) {
     container.appendChild(form);
 }
 
+function renderExportImport(container) {
+    let box = document.createElement("div");
+    box.className = "config-section config-azioni";
+    box.innerHTML = `<h4>💾 Backup & Export</h4>`;
+
+    let info = document.createElement("p");
+    info.className = "info-text";
+    info.textContent = "Esporta i tuoi dati per backup o importa dati salvati in precedenza.";
+    box.appendChild(info);
+
+    // Sottosezione Export
+    let exportSection = document.createElement("div");
+    exportSection.style.marginBottom = "20px";
+    exportSection.style.padding = "15px";
+    exportSection.style.background = "#e8f5e9";
+    exportSection.style.borderRadius = "8px";
+
+    let exportTitle = document.createElement("h5");
+    exportTitle.style.marginTop = "0";
+    exportTitle.style.marginBottom = "10px";
+    exportTitle.textContent = "📤 Export Dati";
+    exportSection.appendChild(exportTitle);
+
+    // Pulsante Export JSON
+    let btnExportJSON = document.createElement("button");
+    btnExportJSON.className = "config-btn config-add";
+    btnExportJSON.textContent = "💾 Esporta Backup Completo (JSON)";
+    btnExportJSON.style.marginRight = "8px";
+    btnExportJSON.style.marginBottom = "8px";
+    btnExportJSON.onclick = () => window.esportaBackupJSON();
+    exportSection.appendChild(btnExportJSON);
+
+    // Pulsante Export Excel
+    let btnExportExcel = document.createElement("button");
+    btnExportExcel.className = "config-btn config-add";
+    btnExportExcel.textContent = "📊 Esporta Turni Mese Corrente (CSV/Excel)";
+    btnExportExcel.style.marginBottom = "8px";
+    btnExportExcel.onclick = () => window.esportaTurniMeseCorrente();
+    exportSection.appendChild(btnExportExcel);
+
+    let exportInfo = document.createElement("p");
+    exportInfo.className = "info-text";
+    exportInfo.style.fontSize = "11px";
+    exportInfo.style.marginTop = "10px";
+    exportInfo.style.marginBottom = "0";
+    exportInfo.innerHTML = `
+        <strong>JSON:</strong> Backup completo (turni, note, configurazioni, regole)<br>
+        <strong>CSV/Excel:</strong> Turni del mese corrente in formato tabellare
+    `;
+    exportSection.appendChild(exportInfo);
+
+    box.appendChild(exportSection);
+
+    // Sottosezione Import
+    let importSection = document.createElement("div");
+    importSection.style.padding = "15px";
+    importSection.style.background = "#fff3e0";
+    importSection.style.borderRadius = "8px";
+
+    let importTitle = document.createElement("h5");
+    importTitle.style.marginTop = "0";
+    importTitle.style.marginBottom = "10px";
+    importTitle.textContent = "📥 Import Dati";
+    importSection.appendChild(importTitle);
+
+    // Input file + pulsante import
+    let fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.id = "import-file-input";
+    fileInput.accept = ".json";
+    fileInput.style.marginBottom = "8px";
+    importSection.appendChild(fileInput);
+
+    let btnImportJSON = document.createElement("button");
+    btnImportJSON.className = "config-btn";
+    btnImportJSON.style.background = "#ff9800";
+    btnImportJSON.textContent = "📥 Importa Backup (JSON)";
+    btnImportJSON.onclick = () => window.importaBackupJSON();
+    importSection.appendChild(btnImportJSON);
+
+    let importWarning = document.createElement("p");
+    importWarning.className = "info-text";
+    importWarning.style.fontSize = "11px";
+    importWarning.style.marginTop = "10px";
+    importWarning.style.marginBottom = "0";
+    importWarning.style.color = "#d32f2f";
+    importWarning.style.fontWeight = "bold";
+    importWarning.innerHTML = `
+        ⚠️ <strong>ATTENZIONE:</strong> L'importazione sostituirà tutti i dati attuali!
+    `;
+    importSection.appendChild(importWarning);
+
+    box.appendChild(importSection);
+
+    container.appendChild(box);
+}
+
 function renderConfigAzioni(container) {
     let box = document.createElement("div");
     box.className = "config-section config-azioni";
@@ -523,4 +630,71 @@ window.pulisciTuttiTurniUI = function() {
     const count = pulisciTuttiTurni();
     alert(`✅ Cancellati ${count} turni`);
     renderConfig();
+};
+
+// ============= EXPORT/IMPORT =============
+
+window.esportaBackupJSON = function() {
+    try {
+        const jsonData = esportaDatiJSON();
+        const nomeFile = generaNomeFile('json');
+        downloadFile(jsonData, nomeFile, 'application/json');
+        alert(`✅ Backup esportato con successo!\n\nFile: ${nomeFile}`);
+    } catch (error) {
+        alert(`❌ Errore durante l'export: ${error.message}`);
+        console.error('[EXPORT] Errore export JSON:', error);
+    }
+};
+
+window.esportaTurniMeseCorrente = function() {
+    try {
+        const csvData = esportaTurniExcel(annoCorrente, meseCorrente);
+        const nomeFile = generaNomeFile('excel', annoCorrente, meseCorrente);
+        downloadFile(csvData, nomeFile, 'text/csv;charset=utf-8;');
+        alert(`✅ Turni esportati con successo!\n\nFile: ${nomeFile}`);
+    } catch (error) {
+        alert(`❌ Errore durante l'export: ${error.message}`);
+        console.error('[EXPORT] Errore export Excel:', error);
+    }
+};
+
+window.importaBackupJSON = function() {
+    const fileInput = document.getElementById('import-file-input');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('⚠️ Seleziona un file JSON da importare');
+        return;
+    }
+
+    if (!file.name.endsWith('.json')) {
+        alert('⚠️ Il file deve essere in formato JSON');
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const jsonString = e.target.result;
+            const risultato = importaDatiJSON(jsonString);
+
+            if (risultato.successo) {
+                alert(risultato.messaggio);
+                // Ricarica la pagina per applicare i nuovi dati
+                window.location.reload();
+            } else {
+                alert(`❌ ${risultato.messaggio}`);
+            }
+        } catch (error) {
+            alert(`❌ Errore durante l'importazione: ${error.message}`);
+            console.error('[IMPORT] Errore import JSON:', error);
+        }
+    };
+
+    reader.onerror = function() {
+        alert('❌ Errore durante la lettura del file');
+    };
+
+    reader.readAsText(file);
 };
