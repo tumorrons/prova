@@ -10,6 +10,7 @@
 
 import { valutaRegolaCustom } from '../regole-custom.js';
 import { getState } from '../state.js';
+import { operatoreDisponibile } from '../availability.js';
 
 console.log('📊 [AUTO-SCORING] Modulo caricato correttamente');
 
@@ -29,6 +30,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         sedePrincipale: 0,
         sedePreferita: 0,
         turnoEvitato: 0,
+        disponibilita: 0,      // Nuovo: penalità per assenze soft
         oreSettimanali: 0,
         bilanciamentoOre: 0,  // Nuovo: favorisce distribuzione equa
         preferenzeCustom: 0,
@@ -41,26 +43,42 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
     // 1. BASE: Disponibilità (tutti partono da 0, ma essere disponibile = +0)
     breakdown.base = 0;
 
-    // 2. SEDE PRINCIPALE (forte bonus)
+    // 2. DISPONIBILITÀ: Controlla assenze/ferie
+    if (context.anno !== undefined && context.mese !== undefined) {
+        const { disponibile, motivo, penalita, soft } = operatoreDisponibile(
+            profilo,
+            context.anno,
+            context.mese,
+            giorno
+        );
+
+        // Se ha un'assenza soft, applica penalità
+        if (soft && penalita > 0) {
+            breakdown.disponibilita = -penalita;
+            motivazioni.push(`⚠️ ${motivo}`);
+        }
+    }
+
+    // 3. SEDE PRINCIPALE (forte bonus)
     if (profilo.sedePrincipale === ambulatorio) {
         breakdown.sedePrincipale = 10;
         motivazioni.push(`Sede principale (${ambulatorio})`);
     }
 
-    // 3. SEDE PREFERITA (bonus medio)
+    // 4. SEDE PREFERITA (bonus medio)
     if (profilo.preferenze?.sedePreferita === ambulatorio) {
         breakdown.sedePreferita = 5;
         motivazioni.push("Sede preferita");
     }
 
-    // 4. TURNO EVITATO (penalità media)
+    // 5. TURNO EVITATO (penalità media)
     const turniEvitati = profilo.preferenze?.evitaTurni || [];
     if (turniEvitati.includes(codiceTurno)) {
         breakdown.turnoEvitato = -10;
         motivazioni.push(`Evita turno ${codiceTurno}`);
     }
 
-    // 5. ORE SETTIMANALI (penalità forte se supera)
+    // 6. ORE SETTIMANALI (penalità forte se supera)
     const maxOre = profilo.vincoli?.maxOreSettimanali;
     if (maxOre && context.oreSettimana !== undefined) {
         const { turni } = getState();
@@ -74,7 +92,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         }
     }
 
-    // 5b. BILANCIAMENTO ORE (favorisce distribuzione equa)
+    // 6b. BILANCIAMENTO ORE (favorisce distribuzione equa)
     // Penalità progressiva proporzionale alle ore già accumulate
     // Chi ha meno ore ha punteggio migliore → distribuzione equa
     if (context.oreSettimana !== undefined && context.oreSettimana > 0) {
@@ -84,7 +102,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         motivazioni.push(`Ore settimana: ${context.oreSettimana}h`);
     }
 
-    // 6. REGOLE CUSTOM PREFERENZE (bonus variabile)
+    // 7. REGOLE CUSTOM PREFERENZE (bonus variabile)
     const regolePreferenze = profilo.preferenze?.regole || [];
     if (regolePreferenze.length > 0) {
         regolePreferenze.filter(r => r.attiva).forEach(regola => {
@@ -96,7 +114,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         });
     }
 
-    // 7. REGOLE CUSTOM VINCOLI (penalità variabile)
+    // 8. REGOLE CUSTOM VINCOLI (penalità variabile)
     const regoleVincoli = profilo.vincoli?.regole || [];
     if (regoleVincoli.length > 0) {
         regoleVincoli.filter(r => r.attiva).forEach(regola => {
@@ -113,18 +131,19 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         });
     }
 
-    // 8. CALCOLA TOTALE
+    // 9. CALCOLA TOTALE
     breakdown.totale =
         breakdown.base +
         breakdown.sedePrincipale +
         breakdown.sedePreferita +
         breakdown.turnoEvitato +
+        breakdown.disponibilita +     // Penalità assenze soft
         breakdown.oreSettimanali +
-        breakdown.bilanciamentoOre +  // Nuovo componente
+        breakdown.bilanciamentoOre +
         breakdown.preferenzeCustom +
         breakdown.vincoliCustom;
 
-    // 9. CALCOLA CONFIDENZA (normalizza score in 0-1)
+    // 10. CALCOLA CONFIDENZA (normalizza score in 0-1)
     const confidenza = scoreToConfidenza(breakdown.totale);
 
     return {
@@ -189,17 +208,26 @@ function scoreToConfidenza(score) {
  * @param {number} giorno
  * @param {string} codiceTurno
  * @param {string} ambulatorio
- * @param {Object} context
+ * @param {Object} context - Deve contenere { anno, mese }
  * @returns {Object[]} - Profili validi
  */
 export function filtraOperatoriValidi(profili, giorno, codiceTurno, ambulatorio, context) {
     return profili.filter(profilo => {
-        // TODO: Filtra operatori in base a:
-        // - ferie/assenze per questo giorno
-        // - blacklist turni assoluta
-        // - altri vincoli hard
+        // 1. Controlla disponibilità (assenze/ferie)
+        if (context.anno !== undefined && context.mese !== undefined) {
+            const { disponibile, motivo } = operatoreDisponibile(profilo, context.anno, context.mese, giorno);
 
-        // Per ora: tutti gli operatori sono validi
+            if (!disponibile) {
+                console.log(`[AUTO-SCORING] ❌ ${profilo.nome} non disponibile: ${motivo}`);
+                return false;
+            }
+        }
+
+        // 2. Altri vincoli hard futuri:
+        // - blacklist turni assoluta
+        // - vincoli di ruolo/competenze
+        // - etc.
+
         return true;
     });
 }
