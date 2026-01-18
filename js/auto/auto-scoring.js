@@ -30,6 +30,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         sedePreferita: 0,
         turnoEvitato: 0,
         oreSettimanali: 0,
+        bilanciamentoOre: 0,  // Nuovo: favorisce distribuzione equa
         preferenzeCustom: 0,
         vincoliCustom: 0,
         totale: 0
@@ -73,6 +74,16 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         }
     }
 
+    // 5b. BILANCIAMENTO ORE (favorisce distribuzione equa)
+    // Penalità progressiva proporzionale alle ore già accumulate
+    // Chi ha meno ore ha punteggio migliore → distribuzione equa
+    if (context.oreSettimana !== undefined && context.oreSettimana > 0) {
+        // Penalità: -1 punto ogni 3.5 ore accumulate
+        // Es: 7h → -2, 14h → -4, 21h → -6, 28h → -8, 35h → -10
+        breakdown.bilanciamentoOre = -Math.floor(context.oreSettimana / 3.5);
+        motivazioni.push(`Ore settimana: ${context.oreSettimana}h`);
+    }
+
     // 6. REGOLE CUSTOM PREFERENZE (bonus variabile)
     const regolePreferenze = profilo.preferenze?.regole || [];
     if (regolePreferenze.length > 0) {
@@ -109,6 +120,7 @@ export function calcolaScoreOperatore(profilo, giorno, codiceTurno, ambulatorio,
         breakdown.sedePreferita +
         breakdown.turnoEvitato +
         breakdown.oreSettimanali +
+        breakdown.bilanciamentoOre +  // Nuovo componente
         breakdown.preferenzeCustom +
         breakdown.vincoliCustom;
 
