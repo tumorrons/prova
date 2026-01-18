@@ -185,11 +185,6 @@ export function renderMese(anno = annoCorrente, mese = meseCorrente, compatto = 
 
             let contenuto = turnoSalvato || g;
 
-            // Badge per turni auto-generati
-            if (origine === 'auto') {
-                contenuto += `<span style="font-size:10px;margin-left:2px">🤖</span>`;
-            }
-
             if (nota && nota.testo) {
                 contenuto += `<span class="note-badge">N</span>`;
             }
