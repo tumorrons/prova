@@ -10,7 +10,7 @@
 
 import { operatori, turni, ambulatori } from './state.js';
 import { getNomeMese } from './calendar.js';
-import { getNomeOperatore } from './profili.js';
+import { getNomeOperatore, getIdOperatore } from './profili.js';
 
 /**
  * Esporta tutti i dati da localStorage in formato JSON
@@ -115,12 +115,13 @@ export function esportaTurniCSV(anno, mese) {
     // Righe operatori
     operatori.forEach(op => {
         const opNome = getNomeOperatore(op);
+        const opId = getIdOperatore(op);
         csv += `"${opNome}"`;
 
         let oreTotali = 0;
 
         for (let g = 1; g <= giorni; g++) {
-            const key = `${anno}_${mese}_${typeof op === 'string' ? op : op.cognome}_${g}`;
+            const key = `${anno}_${mese}_${opId}_${g}`;
             let turnoSalvato = localStorage.getItem(key) || "";
 
             // Estrai codice turno se nel formato "AMBULATORIO_TURNO"
@@ -173,7 +174,7 @@ export function esportaTurniAnnoCompleto(anno, ambulatorioFiltro = "") {
         // Righe operatori
         operatori.forEach(op => {
             const opNome = getNomeOperatore(op);
-            const opId = typeof op === 'string' ? op : op.cognome;
+            const opId = getIdOperatore(op);
 
             // Verifica se operatore ha turni questo mese (se filtrato per ambulatorio)
             if (ambulatorioFiltro) {
